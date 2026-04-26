@@ -46,20 +46,39 @@ def test_agent_project_install_doc_exists_and_covers_project_plugin_flow():
         assert phrase not in text
 
 
-def test_readmes_contain_short_prompt_for_agent_project_install():
+def test_readmes_contain_agent_prompts_for_project_and_global_install():
     readme = README.read_text(encoding="utf-8")
     zh_readme = (PLUGIN_ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+    repo_url = "https://github.com/Rycen7822/DeepScientist-hermes"
 
-    assert "Agent prompt for project-local installation" in readme
+    assert repo_url in readme
+    assert "Agent installation prompts" in readme
+    assert "Project-local installation prompt" in readme
+    assert "Source repository to fetch first" in readme
+    assert "clone" in readme
     assert "docs/AGENT_PROJECT_INSTALL.md" in readme
     assert "target project directory" in readme
     assert "Do not install into the global Hermes plugin directory" in readme
     assert "HERMES_ENABLE_PROJECT_PLUGINS=true" in readme
     assert "<target-project>/.hermes/plugins/deepscientist/" in readme
+    assert "Global installation prompt" in readme
+    assert "globally for the active Hermes user" in readme
+    assert "${HERMES_HOME:-$HOME/.hermes}/plugins/deepscientist/" in readme
+    assert "plugins.enabled" in readme
+    assert "plugins.disabled" in readme
 
+    assert repo_url in zh_readme
+    assert "给 agent 的安装 prompts" in zh_readme
     assert "项目级安装 prompt" in zh_readme
+    assert "需要先拉取的源码仓库" in zh_readme
+    assert "clone" in zh_readme
     assert "docs/AGENT_PROJECT_INSTALL.md" in zh_readme
     assert "目标项目目录" in zh_readme
     assert "不要安装到全局 Hermes plugin 目录" in zh_readme
     assert "HERMES_ENABLE_PROJECT_PLUGINS=true" in zh_readme
     assert "<target-project>/.hermes/plugins/deepscientist/" in zh_readme
+    assert "全局安装 prompt" in zh_readme
+    assert "全局安装到当前 Hermes 用户环境" in zh_readme
+    assert "${HERMES_HOME:-$HOME/.hermes}/plugins/deepscientist/" in zh_readme
+    assert "plugins.enabled" in zh_readme
+    assert "plugins.disabled" in zh_readme

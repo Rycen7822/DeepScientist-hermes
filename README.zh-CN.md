@@ -47,6 +47,14 @@ tests/                              合同测试和回归测试
 
 ## 快速开始
 
+插件源码仓库是：
+
+```text
+https://github.com/Rycen7822/DeepScientist-hermes
+```
+
+把安装任务交给另一个 Hermes agent 时，必须明确告诉它先 clone 或更新这个仓库。clone 下来的仓库根目录就是插件源码目录；该目录必须包含 `plugin.yaml`、`__init__.py`、`docs/USAGE.md` 和 `docs/AGENT_PROJECT_INSTALL.md`。
+
 推荐使用项目级安装。把插件安装到需要 DeepScientist 工作区的研究项目中：
 
 ```text
@@ -68,21 +76,42 @@ cd <target-project>
 HERMES_ENABLE_PROJECT_PLUGINS=true hermes
 ```
 
-standalone 插件仍需要在当前 Hermes home config 中启用，除非使用项目本地 `HERMES_HOME`。完整步骤和取舍见 `docs/AGENT_PROJECT_INSTALL.md`。
+standalone 插件仍需要在当前 Hermes home config 中启用，除非使用项目本地 `HERMES_HOME`。项目级安装的完整步骤和取舍见 `docs/AGENT_PROJECT_INSTALL.md`。
 
-## 项目级安装 prompt
+如果希望插件对当前 Hermes 用户全局可用，也可以做全局安装。全局安装时，插件代码位于 `${HERMES_HOME:-$HOME/.hermes}/plugins/deepscientist/`，并且需要在 `$HERMES_HOME/config.yaml` 的 `plugins.enabled` 中启用 `deepscientist`；但具体研究任务仍应从对应研究项目目录启动 Hermes，使 DeepScientist runtime 位于 `<research-project>/DeepScientist/`。
+
+## 给 agent 的安装 prompts
+
+### 项目级安装 prompt
 
 把下面这段 prompt 交给 Hermes agent，并替换目标项目路径：
 
 ```text
 请把 DeepScientist Hermes 原生插件按项目级方式安装到目标项目目录：<target-project>。
-插件源码是当前仓库根目录，根目录中包含 plugin.yaml 和 docs/AGENT_PROJECT_INSTALL.md。
-请先阅读 docs/AGENT_PROJECT_INSTALL.md，并严格按该文档执行。
+需要先拉取的源码仓库：https://github.com/Rycen7822/DeepScientist-hermes
+如果本机还没有 clone 该仓库，请 clone 到安全的临时目录或用户指定工作目录；如果已经 clone，请先 pull/update。使用 clone 后的仓库根目录作为 <plugin-source>；它必须包含 plugin.yaml、__init__.py、docs/USAGE.md 和 docs/AGENT_PROJECT_INSTALL.md。
+请先阅读 <plugin-source>/docs/AGENT_PROJECT_INSTALL.md，并严格按该文档执行。
 安装目标必须是 <target-project>/.hermes/plugins/deepscientist/。
 不要安装到全局 Hermes plugin 目录，不要修改 Hermes core。
 需要启用项目级插件扫描：HERMES_ENABLE_PROJECT_PLUGINS=true。
 安装后请验证 /ds help、/ds doctor 和 deepscientist:deepscientist-mode。
-最终回复请给出插件目录、DeepScientist runtime 目录、验证结果、是否修改了 $HERMES_HOME/config.yaml 或是否使用项目本地 HERMES_HOME，以及完成时间。
+最终回复请给出源码 clone 路径、插件目录、DeepScientist runtime 目录、验证结果、是否修改了 $HERMES_HOME/config.yaml 或是否使用项目本地 HERMES_HOME，以及完成时间。
+```
+
+### 全局安装 prompt
+
+如果希望给当前 Hermes 用户做常规全局插件安装，把下面这段 prompt 交给 Hermes agent：
+
+```text
+请把 DeepScientist Hermes 原生插件全局安装到当前 Hermes 用户环境。
+需要先拉取的源码仓库：https://github.com/Rycen7822/DeepScientist-hermes
+如果本机还没有 clone 该仓库，请 clone 到安全的临时目录或用户指定工作目录；如果已经 clone，请先 pull/update。使用 clone 后的仓库根目录作为 <plugin-source>；它必须包含 plugin.yaml、__init__.py、docs/USAGE.md 和 vendor/deepscientist/。
+把插件代码安装到 ${HERMES_HOME:-$HOME/.hermes}/plugins/deepscientist/；如果设置了 HERMES_HOME，则使用 $HERMES_HOME/plugins/deepscientist/。
+通过把 deepscientist 加入 $HERMES_HOME/config.yaml 的 plugins.enabled 来启用 standalone 插件；必须保留已有配置，如果 plugins.disabled 里有 deepscientist，需要移除。
+不要修改 Hermes core。不要把全局 npm ds 命令作为正常 runtime 路径。不要启用 Web UI、TUI 或 raw MCP surface。
+安装后重启 Hermes。请从实际研究项目目录启动 Hermes，使该项目的 DeepScientist runtime 位于 <research-project>/DeepScientist/。
+重启后请验证 /ds help、/ds doctor 和 deepscientist:deepscientist-mode。
+最终回复请给出源码 clone 路径、全局插件目录、当前 Hermes home、配置变更、DeepScientist runtime 目录、验证结果和完成时间。
 ```
 
 ## Hermes 内使用方式
