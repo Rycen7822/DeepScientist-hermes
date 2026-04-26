@@ -116,6 +116,8 @@ Do not proceed to comparison-heavy downstream work unless one of the following i
 
 Operationally:
 
+- in the Hermes-native plugin, prefer `ds_create_local_baseline` for local stubs and then pass its `confirm_args` to `ds_confirm_baseline`
+- canonical local path is `<quest_root>/baselines/local/<baseline_id>/baseline.md`; arbitrary experiment artifact paths are not valid baseline gate inputs until copied or created there
 - call `artifact.confirm_baseline(...)` once the accepted baseline root and trusted comparison contract are clear
 - call `artifact.waive_baseline(...)` when the quest must continue without a baseline
 - attach, import, or publish alone do not open the downstream gate

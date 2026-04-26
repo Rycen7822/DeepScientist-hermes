@@ -90,12 +90,12 @@ Use DeepScientist tools when the result should be part of the durable research r
 - `ds_memory_read`: read a memory card.
 - `ds_memory_write`: store durable research facts, constraints, conclusions.
 - `ds_artifact_record`: record generic evidence or structured outputs.
-- `ds_confirm_baseline`, `ds_waive_baseline`, `ds_attach_baseline`: manage baseline gates.
+- `ds_confirm_baseline`, `ds_waive_baseline`, `ds_attach_baseline`, `ds_create_local_baseline`: manage baseline gates. Prefer `ds_create_local_baseline` for local stubs under `baselines/local/<baseline_id>/baseline.md` before calling `ds_confirm_baseline`.
 - `ds_submit_idea`: record a research idea candidate.
 - `ds_record_main_experiment`: record a main experiment run.
-- `ds_create_analysis_campaign`, `ds_record_analysis_slice`: record systematic analysis.
-- `ds_submit_paper_outline`, `ds_submit_paper_bundle`: record writing outputs.
-- `ds_bash_exec`: run/list/read/wait/stop quest-local execution that should be logged by DeepScientist.
+- `ds_create_analysis_campaign`, `ds_get_analysis_campaign`, `ds_record_analysis_slice`: record and diagnose systematic analysis. Before writing/paper bundle work, inspect active analysis campaign state and finish or close pending slices.
+- `ds_submit_paper_outline`, `ds_submit_paper_bundle`: record writing outputs. Use `candidate -> select` for outline selection; `selected` is only a compatibility alias for `select`.
+- `ds_bash_exec`: run/list/read/wait/stop quest-local execution that should be logged by DeepScientist. Set `allow_project_root=true` only when project-root workdir is required; complex Python should be written to a `.py` file before execution instead of large inline heredoc.
 - `ds_pause_quest`, `ds_resume_quest`, `ds_stop_quest`: update quest lifecycle.
 
 Use Hermes native tools when work is local and does not itself need to become quest state:
@@ -154,6 +154,7 @@ Use tool calls rather than slash commands for complex agent work.
 ## Memory and artifact writing
 
 - Use memory for durable facts: problem framing, constraints, chosen metrics, environment assumptions, validated conclusions, and reusable lessons.
+- memory kind canonical values are `papers`, `ideas`, `decisions`, `episodes`, `knowledge`, `templates`; semantic aliases such as `constraint`, `context`, `observation`, `hypothesis`, `result`, and `plan` are normalized by the Hermes wrapper and retained as tags/metadata.
 - Use artifacts for evidence: plans, baseline decisions, experiment records, analysis results, paper bundles, review reports.
 - Do not write short-lived todos as memory.
 - Titles should be searchable and specific.

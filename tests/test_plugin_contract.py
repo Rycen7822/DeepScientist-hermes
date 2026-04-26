@@ -9,8 +9,8 @@ from conftest import PLUGIN_ROOT, load_plugin
 EXPECTED_NATIVE_TOOLS = {
     "ds_doctor", "ds_list_quests", "ds_get_quest_state", "ds_set_active_quest", "ds_new_quest",
     "ds_add_user_message", "ds_read_quest_documents", "ds_memory_search", "ds_memory_read", "ds_memory_write",
-    "ds_artifact_record", "ds_confirm_baseline", "ds_waive_baseline", "ds_attach_baseline", "ds_submit_idea",
-    "ds_list_research_branches", "ds_record_main_experiment", "ds_create_analysis_campaign", "ds_record_analysis_slice",
+    "ds_artifact_record", "ds_confirm_baseline", "ds_waive_baseline", "ds_attach_baseline", "ds_create_local_baseline", "ds_submit_idea",
+    "ds_list_research_branches", "ds_record_main_experiment", "ds_create_analysis_campaign", "ds_get_analysis_campaign", "ds_record_analysis_slice",
     "ds_submit_paper_outline", "ds_submit_paper_bundle", "ds_bash_exec", "ds_pause_quest", "ds_resume_quest", "ds_stop_quest",
 }
 EXPECTED_SKILLS = {

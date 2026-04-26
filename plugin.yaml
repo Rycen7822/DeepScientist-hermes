@@ -1,5 +1,5 @@
 name: deepscientist
-version: 0.2.0
+version: 0.2.1
 kind: standalone
 description: "Hermes-native DeepScientist research mode with vendored headless runtime."
 author: "local"
@@ -18,10 +18,12 @@ provides_tools:
   - ds_confirm_baseline
   - ds_waive_baseline
   - ds_attach_baseline
+  - ds_create_local_baseline
   - ds_submit_idea
   - ds_list_research_branches
   - ds_record_main_experiment
   - ds_create_analysis_campaign
+  - ds_get_analysis_campaign
   - ds_record_analysis_slice
   - ds_submit_paper_outline
   - ds_submit_paper_bundle

@@ -11,9 +11,11 @@ REQUIRED_TOOL_NAMES = [
     "ds_memory_write",
     "ds_memory_search",
     "ds_artifact_record",
+    "ds_create_local_baseline",
     "ds_bash_exec",
     "ds_submit_idea",
     "ds_record_main_experiment",
+    "ds_get_analysis_campaign",
     "ds_submit_paper_bundle",
 ]
 
@@ -60,6 +62,13 @@ def test_user_usage_documentation_exists_and_covers_agent_workflow():
         "阶段推进规则",
         "故障处理",
         "安装后验证",
+        "memory kind",
+        "baselines/local/<baseline_id>/baseline.md",
+        "allow_project_root",
+        "candidate -> select",
+        "active analysis campaign",
+        "离线小数据",
+        "写入 `.py` 文件",
     ]
     for phrase in required_phrases:
         assert phrase in text

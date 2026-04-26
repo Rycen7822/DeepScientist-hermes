@@ -93,6 +93,8 @@ Treat this as the short run-order summary. The detailed run contract, execution 
 
 - Do not fabricate metrics, logs, claims, or improvement narratives.
 - Do not introduce a new dataset or silently change splits or evaluation protocol.
+- For plugin/full-workflow smoke tests, do not rely on live dataset downloads; if network I/O is slow or unavailable, use an offline small-data fixture or deterministic procedural data and record the scope caveat in the experiment and paper text.
+- For multi-step Python helpers, write a `.py` file first and execute it; reserve inline heredoc commands for short, simple snippets only.
 - Do not change metric definitions or evaluation logic unless the change is explicitly justified and durably recorded.
 - Do not stop after a quick sanity run if the agreed goal is a real experiment.
 - Do not claim success before durable artifacts exist and the acceptance gate passes.

@@ -85,6 +85,7 @@ Treat this as the compressed campaign map. The authoritative slice protocol and 
 5. Run claim-critical slices first and smoke-test long slices before their real runs.
 6. Revise the plan and matrix if slice feasibility, ordering, comparators, or campaign interpretation changes materially, and record every slice durably, including honest non-success states.
 7. Close meaningful campaign milestones with a concise `1-2` sentence summary that says whether the claim gained stable support, partial support, contradiction, or unresolved ambiguity, what the matrix frontier now looks like, and what happens next.
+8. Before returning to `write`, outline selection, or paper bundle submission, use the Hermes-native `ds_get_analysis_campaign` tool if available and verify there is no active campaign with pending required slices.
 
 ## Non-negotiable rules
 

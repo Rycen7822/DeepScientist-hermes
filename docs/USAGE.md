@@ -194,6 +194,7 @@ Slash command 主要面向用户交互和快速检查。复杂工作仍应优先
 记忆与 artifacts 的写入规范：
 
 - memory 写事实、约束、结论、可复用经验。
+- memory kind 要使用插件支持的枚举或别名：canonical 值是 `papers`、`ideas`、`decisions`、`episodes`、`knowledge`、`templates`；`paper`/`idea`/`decision` 等单数会归一化；`constraint`、`context`、`observation`、`hypothesis`、`result`、`plan` 会作为语义别名写入 `knowledge`，并保留 tag/metadata。
 - artifact 写证据、结构化产物、实验记录、bundle、gate 决策。
 - 不要把临时 todo 或一次性状态写成 memory；这类内容可放 artifacts 或当前回复。
 - 写 memory 时标题要可检索，正文要包含来源、日期/阶段、适用范围。
@@ -205,10 +206,12 @@ Slash command 主要面向用户交互和快速检查。复杂工作仍应优先
 | `ds_confirm_baseline` | 确认 baseline gate |
 | `ds_waive_baseline` | 明确豁免 baseline gate，并记录理由 |
 | `ds_attach_baseline` | 把 baseline 附着到 quest 工作区 |
+| `ds_create_local_baseline` | 在 quest 内创建 `baselines/local/<baseline_id>/baseline.md` 本地 baseline stub，并返回可直接传给 `ds_confirm_baseline` 的 `confirm_args` |
 | `ds_submit_idea` | 提交或修订研究 idea |
 | `ds_list_research_branches` | 查看 quest research branches/worktrees |
 | `ds_record_main_experiment` | 记录主实验 run |
 | `ds_create_analysis_campaign` | 创建分析 campaign |
+| `ds_get_analysis_campaign` | 读取 active 或指定 analysis campaign，诊断待完成 slice |
 | `ds_record_analysis_slice` | 记录单个分析 slice |
 | `ds_submit_paper_outline` | 提交/选择/修订论文 outline |
 | `ds_submit_paper_bundle` | 提交论文 bundle manifest |
@@ -229,6 +232,8 @@ Slash command 主要面向用户交互和快速检查。复杂工作仍应优先
 
 - 如果只是普通项目测试，可用 Hermes `terminal`。
 - 如果执行结果属于 quest 证据链，优先使用 `ds_bash_exec`，并在结束后记录 artifact 或 experiment。
+- 默认 workdir 只允许 quest 目录内路径；确实需要从项目根目录执行项目级插件安装、升级、验证时，显式设置 `allow_project_root=true`，并确认输出仍会被记录到当前 quest。
+- 复杂 Python 或多行脚本不要塞进大型 shell heredoc；优先先用 Hermes `write_file` 写入 `.py` 文件，再让 `ds_bash_exec` 执行该文件。这样可避免截断、引号错配和不可复现的 inline 命令。
 - 长命令要设置合理 timeout，避免无边界等待。
 
 ## 7. 阶段推进规则
@@ -289,7 +294,8 @@ DeepScientist 原生插件注册了阶段技能。每次只加载与当前阶段
 1. 确认 active quest 和 stage 为 `experiment`。
 2. 用 `ds_bash_exec` 或 Hermes `terminal` 执行实验。
 3. 读取日志、指标和输出文件。
-4. 调用 `ds_record_main_experiment`，至少记录：
+4. 如果外部网络或大数据下载不稳定，先构造离线小数据 fixture 或程序化最小基准，把范围限制写入 baseline/experiment 记录，不要把离线小数据结果夸大成真实数据集结论。
+5. 调用 `ds_record_main_experiment`，至少记录：
    - `run_id`
    - hypothesis
    - setup
@@ -297,17 +303,18 @@ DeepScientist 原生插件注册了阶段技能。每次只加载与当前阶段
    - results
    - conclusion
    - evidence_paths
-5. 如果结论影响后续路线，再调用 `ds_memory_write`。
+6. 如果结论影响后续路线，再调用 `ds_memory_write`。
 
 ### 8.4 论文写作
 
 1. 确认 baseline、idea、experiment、analysis 已有足够 artifact。
 2. 进入 `write`。
 3. 加载 `deepscientist:write`。
-4. 用 `ds_submit_paper_outline` 固化 outline。
-5. 写作时用 Hermes 文件工具编辑草稿。
-6. 用 `ds_submit_paper_bundle` 记录 draft、references、claim-evidence map、compile report、PDF 路径。
-7. 进入 `review` 或 `finalize`。
+4. 用 `ds_submit_paper_outline` 固化 outline：先提交 `candidate`，再用 `candidate -> select` 选择最终 outline；`selected` 只是兼容别名，推荐显式使用 `select`。
+5. 写作前调用 `ds_get_analysis_campaign` 检查是否还有 active analysis campaign；若仍有 pending slice，先完成或关闭 campaign，否则 outline selection / paper bundle gate 可能被阻塞。
+6. 写作时用 Hermes 文件工具编辑草稿。
+7. 用 `ds_submit_paper_bundle` 记录 draft、references、claim-evidence map、compile report、PDF 路径。
+8. 进入 `review` 或 `finalize`。
 
 ## 9. 安装后验证
 

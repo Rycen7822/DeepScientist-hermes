@@ -114,7 +114,7 @@ class MemoryService:
         metadata: dict[str, Any] | None = None,
     ) -> dict:
         if kind not in MEMORY_KINDS:
-            raise ValueError(f"Unknown memory kind: {kind}")
+            raise ValueError(f"Unknown memory kind: {kind}. Allowed memory kinds: {', '.join(MEMORY_KINDS)}")
         root = self._root_for(scope, quest_root)
         folder = ensure_dir(root / kind)
         if markdown and markdown.lstrip().startswith("---"):

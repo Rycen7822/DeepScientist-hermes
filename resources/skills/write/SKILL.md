@@ -131,6 +131,8 @@ Prefer an author-facing outline folder under `paper/outline/` with section-level
 Before writing seriously, confirm:
 
 - the baseline state is accepted or explicitly waived
+- no active analysis campaign still has pending required slices; in the Hermes-native plugin call `ds_get_analysis_campaign` before outline selection or paper bundle submission when campaign state is uncertain
+- outline workflow uses `candidate -> select -> revise`; `selected` is only a compatibility alias for `select`
 - the claims you intend to write are backed by durable artifacts
 - the code/diff path is available for method fidelity checks
 - the evaluation contract is explicit
