@@ -32,9 +32,34 @@ def resource_repo_root(config: NativeConfig | None = None) -> Path:
     return (cfg.resource_repo_root or DEFAULT_RESOURCE_REPO_ROOT).expanduser().resolve()
 
 
+def _path_is_under(path: str | os.PathLike[str] | None, root: Path) -> bool:
+    if not path:
+        return False
+    try:
+        Path(path).resolve().relative_to(root.resolve())
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def _clear_conflicting_deepscientist_modules(vendor_root: Path) -> None:
+    existing = sys.modules.get("deepscientist")
+    if existing is None:
+        return
+    module_file = getattr(existing, "__file__", None)
+    module_paths = list(getattr(existing, "__path__", []) or [])
+    if _path_is_under(module_file, vendor_root) or any(_path_is_under(path, vendor_root) for path in module_paths):
+        return
+    for name in list(sys.modules):
+        if name == "deepscientist" or name.startswith("deepscientist."):
+            sys.modules.pop(name, None)
+
+
 def ensure_runtime_import_environment(config: NativeConfig | None = None) -> None:
     cfg = config or load_config()
-    vendor = str(VENDOR_ROOT.resolve())
+    vendor_root = VENDOR_ROOT.resolve()
+    _clear_conflicting_deepscientist_modules(vendor_root)
+    vendor = str(vendor_root)
     if vendor not in sys.path:
         sys.path.insert(0, vendor)
     # Child monitor processes launched by BashExecService import deepscientist by module name.
