@@ -8,6 +8,7 @@ REQUIRED_TOOL_NAMES = [
     "ds_new_quest",
     "ds_set_active_quest",
     "ds_get_quest_state",
+    "ds_record_user_requirement",
     "ds_memory_write",
     "ds_memory_search",
     "ds_artifact_record",
@@ -17,6 +18,7 @@ REQUIRED_TOOL_NAMES = [
     "ds_record_main_experiment",
     "ds_get_analysis_campaign",
     "ds_submit_paper_bundle",
+    "ds_workflow_smoke_report",
 ]
 
 REQUIRED_SLASH_COMMANDS = [
@@ -117,6 +119,6 @@ def test_agent_mode_skill_contains_enough_operational_guidance():
     ]
     for phrase in required:
         assert phrase in text
-    for name in ["ds_doctor", "ds_new_quest", "ds_get_quest_state", "ds_memory_write", "ds_artifact_record", "ds_bash_exec"]:
+    for name in ["ds_doctor", "ds_new_quest", "ds_get_quest_state", "ds_record_user_requirement", "ds_memory_write", "ds_artifact_record", "ds_bash_exec", "ds_workflow_smoke_report"]:
         assert f"`{name}`" in text
     assert "daemon" not in text.lower()

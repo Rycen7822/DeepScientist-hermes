@@ -177,7 +177,8 @@ Slash command 主要面向用户交互和快速检查。复杂工作仍应优先
 | `ds_new_quest` | 新建 quest | 新研究目标 |
 | `ds_set_active_quest` | 绑定当前 Hermes session 到 quest | 续作或切换 quest |
 | `ds_get_quest_state` | 读取 compact/full quest 状态 | 每轮关键操作前后 |
-| `ds_add_user_message` | 向 quest 追加用户指令 | 用户给已有 quest 新指令 |
+| `ds_add_user_message` | 向 quest 追加用户指令；`record_only=true` 时只作为 durable requirement 记录 | 用户给已有 quest 新指令，或需要记录但不希望产生 pending queue |
+| `ds_record_user_requirement` | 写入 quest conversation 和 `active-user-requirements.md`，不留下 pending user message | 记录原始需求、实验约束、交付边界 |
 | `ds_pause_quest` | 标记 quest 暂停 | 等待外部资源或用户决定 |
 | `ds_resume_quest` | 恢复 quest | 暂停后继续 |
 | `ds_stop_quest` | 标记 quest 停止 | 任务结束或废弃 |
@@ -214,8 +215,9 @@ Slash command 主要面向用户交互和快速检查。复杂工作仍应优先
 | `ds_get_analysis_campaign` | 读取 active 或指定 analysis campaign，诊断待完成 slice |
 | `ds_record_analysis_slice` | 记录单个分析 slice |
 | `ds_submit_paper_outline` | 提交/选择/修订论文 outline |
-| `ds_submit_paper_bundle` | 提交论文 bundle manifest |
+| `ds_submit_paper_bundle` | 提交论文 bundle manifest；Markdown-only 草稿会统计 `##` sections，并将返回 guidance 对齐到最新 quest anchor |
 | `ds_artifact_record` | 记录通用 artifact |
+| `ds_workflow_smoke_report` | 生成非执行型全流程 smoke checklist，覆盖 dataset/baseline/experiment/analysis/paper_bundle/report |
 
 ### 6.4 Quest-local execution
 
@@ -232,6 +234,7 @@ Slash command 主要面向用户交互和快速检查。复杂工作仍应优先
 
 - 如果只是普通项目测试，可用 Hermes `terminal`。
 - 如果执行结果属于 quest 证据链，优先使用 `ds_bash_exec`，并在结束后记录 artifact 或 experiment。
+- 如果命令输出较长或只需要 provenance 摘要，设置 `summary_mode=true` 或 `response_mode=summary`，避免把完整日志塞回上下文。
 - 默认 workdir 只允许 quest 目录内路径；确实需要从项目根目录执行项目级插件安装、升级、验证时，显式设置 `allow_project_root=true`，并确认输出仍会被记录到当前 quest。
 - 复杂 Python 或多行脚本不要塞进大型 shell heredoc；优先先用 Hermes `write_file` 写入 `.py` 文件，再让 `ds_bash_exec` 执行该文件。这样可避免截断、引号错配和不可复现的 inline 命令。
 - 长命令要设置合理 timeout，避免无边界等待。

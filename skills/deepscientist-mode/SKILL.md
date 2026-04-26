@@ -85,7 +85,8 @@ Use DeepScientist tools when the result should be part of the durable research r
 - `ds_new_quest`: create a quest.
 - `ds_set_active_quest`: bind this Hermes session to a quest.
 - `ds_get_quest_state`: inspect current state.
-- `ds_add_user_message`: append user instructions to a quest.
+- `ds_add_user_message`: append user instructions to a quest. Use `record_only=true` when the instruction should be durable context but should not wake/queue a pending user message.
+- `ds_record_user_requirement`: record durable user requirements into quest conversation and `active-user-requirements.md` without leaving `pending_user_message_count > 0`.
 - `ds_memory_search`: search project/quest memory.
 - `ds_memory_read`: read a memory card.
 - `ds_memory_write`: store durable research facts, constraints, conclusions.
@@ -94,8 +95,9 @@ Use DeepScientist tools when the result should be part of the durable research r
 - `ds_submit_idea`: record a research idea candidate.
 - `ds_record_main_experiment`: record a main experiment run.
 - `ds_create_analysis_campaign`, `ds_get_analysis_campaign`, `ds_record_analysis_slice`: record and diagnose systematic analysis. Before writing/paper bundle work, inspect active analysis campaign state and finish or close pending slices.
-- `ds_submit_paper_outline`, `ds_submit_paper_bundle`: record writing outputs. Use `candidate -> select` for outline selection; `selected` is only a compatibility alias for `select`.
-- `ds_bash_exec`: run/list/read/wait/stop quest-local execution that should be logged by DeepScientist. Set `allow_project_root=true` only when project-root workdir is required; complex Python should be written to a `.py` file before execution instead of large inline heredoc.
+- `ds_submit_paper_outline`, `ds_submit_paper_bundle`: record writing outputs. Use `candidate -> select` for outline selection; `selected` is only a compatibility alias for `select`. Markdown-only bundles are supported; the Hermes wrapper counts `##` sections and aligns returned guidance with the latest quest anchor.
+- `ds_bash_exec`: run/list/read/wait/stop quest-local execution that should be logged by DeepScientist. Set `allow_project_root=true` only when project-root workdir is required; set `summary_mode=true` for compact provenance output; complex Python should be written to a `.py` file before execution instead of large inline heredoc.
+- `ds_workflow_smoke_report`: produce a non-mutating Hermes-only checklist for dataset inspection, baseline, experiment, analysis, paper bundle, and final report handoff.
 - `ds_pause_quest`, `ds_resume_quest`, `ds_stop_quest`: update quest lifecycle.
 
 Use Hermes native tools when work is local and does not itself need to become quest state:

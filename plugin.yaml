@@ -1,5 +1,5 @@
 name: deepscientist
-version: 0.2.1
+version: 0.2.2
 kind: standalone
 description: "Hermes-native DeepScientist research mode with vendored headless runtime."
 author: "local"
@@ -10,6 +10,7 @@ provides_tools:
   - ds_set_active_quest
   - ds_new_quest
   - ds_add_user_message
+  - ds_record_user_requirement
   - ds_read_quest_documents
   - ds_memory_search
   - ds_memory_read
@@ -28,6 +29,7 @@ provides_tools:
   - ds_submit_paper_outline
   - ds_submit_paper_bundle
   - ds_bash_exec
+  - ds_workflow_smoke_report
   - ds_pause_quest
   - ds_resume_quest
   - ds_stop_quest
