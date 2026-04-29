@@ -195,6 +195,36 @@ Use a per-paper temp directory such as:
 
 It may contain `paper.pdf`, `paper.txt`, `metadata.json`, `urls.txt`, and extraction status files. Delete it after you have persisted the quest evidence. Confirm it is gone. Do not delete it while the active shell/tool cwd is inside it.
 
+## ACM Digital Library Route
+
+Treat ACM DL as a primary metadata/source surface, but do not try to bypass access controls.
+
+### Normalize
+
+- `https://dl.acm.org/doi/<doi>` -> preserve as the ACM landing page and derive:
+  - `https://doi.org/<doi>`
+  - `https://dl.acm.org/doi/pdf/<doi>`
+  - `https://dl.acm.org/doi/epdf/<doi>` only as an access check, not as a guaranteed body source.
+- DOI-only input such as `10.1145/...` -> derive DOI resolver and ACM DOI paths when the publisher is ACM.
+
+### Preferred order
+
+1. Try the ACM landing page and `/doi/pdf/...` route with normal HTTP/browser access.
+2. If ACM DL returns Cloudflare/challenge, `403`, institutional-login, or paywall responses, record that exact status and stop retrying aggressively.
+3. Fetch bibliographic metadata from Crossref and/or OpenAlex by DOI.
+4. Check whether Crossref/OpenAlex marks the work as closed/open and whether any PDF URL is exposed.
+5. Search for an author-allowed/open twin by exact title, especially arXiv, institutional repository, or author project page.
+6. If an open twin is found, download/read that version while preserving the ACM DOI as the canonical published source and caveating version differences.
+7. If only closed ACM access exists, report `metadata_only` rather than using unauthorized mirrors.
+
+### What to record
+
+- ACM DOI and landing page;
+- ACM PDF route status, e.g. `403 Cloudflare challenge`, `paywalled`, `institutional login required`, or `downloaded`;
+- Crossref/OpenAlex title, venue, publication date, and OA status;
+- open twin URL and version if used, e.g. arXiv id/version;
+- whether the retrieved PDF is publisher VOR or an author/preprint version.
+
 ## Direct PDF / Other Hosts
 
 Treat direct PDFs as paper-reading requests, not webpage clipping.
