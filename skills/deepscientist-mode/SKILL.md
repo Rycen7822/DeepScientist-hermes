@@ -129,6 +129,8 @@ Use DeepScientist tools when the result should be part of the durable research r
 - `ds_workflow_smoke_report`: produce a non-mutating Hermes-only checklist for dataset inspection, baseline, experiment, analysis, paper bundle, and final report handoff.
 - `ds_pause_quest`, `ds_resume_quest`, `ds_stop_quest`: update quest lifecycle.
 
+Load `paper-fetch` when a DeepScientist quest needs arXiv/OpenReview PDF retrieval or official paper-resource verification. Do not load note-taking `clip` for this case unless the user explicitly asks to archive the paper into `llm-wiki`.
+
 Use Hermes native tools when work is local and does not itself need to become quest state:
 
 - `read_file`, `search_files`, `patch`, `write_file` for files.

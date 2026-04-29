@@ -478,6 +478,7 @@ If these are still unstable, continue planning or route back for evidence instea
 Do not rush into polished prose before evidence assembly, figure planning, and citation verification are far enough along to keep the draft honest.
 If writing uncovers missing information, it is acceptable to return to focused literature search or artifact reading, but persist the findings immediately before resuming drafting.
 Use web search to discover missing papers or references, and use `artifact.arxiv(paper_id=..., full_text=False)` when you need to actually read an arXiv paper rather than just locate it.
+Load `paper-fetch` when writing requires arXiv/OpenReview PDF retrieval, authenticated OpenReview access, or official resource verification; keep those results in quest evidence/memory, not in `llm-wiki`, unless the user explicitly asks for clipping.
 Only set `full_text=True` when the shorter view is insufficient for the needed detail.
 Before treating related work coverage as adequate, run broad literature discovery and reading passes; for a normal paper-like deliverable, aim for roughly `30` to `50` verified references unless the scope clearly justifies fewer.
 

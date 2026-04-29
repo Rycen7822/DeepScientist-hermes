@@ -57,6 +57,7 @@ If one of these layers is still missing, say so explicitly.
   Prefer web search for paper discovery, usually targeting arXiv first, then expand with benchmark docs, official repos, and broader web search for provenance.
 - When a specific arXiv paper must be read or summarized, use `artifact.arxiv(paper_id=..., full_text=False)` instead of defaulting to a raw PDF.
   Keep discovery in web search; use `artifact.arxiv(...)` only for actual paper reading, and set `full_text=True` only when needed.
+- When paper retrieval details matter (arXiv/OpenReview PDF download, authenticated OpenReview access, or official code/dataset/model verification), load `paper-fetch`; do not load `clip` unless the user explicitly asks to archive into `llm-wiki`.
 - Avoid repeating the same wide search from scratch.
   Reuse prior survey notes and search only for genuinely missing, newer, or unresolved references.
 - Do not write long paper summaries that do not change the next stage.

@@ -16,7 +16,7 @@ EXPECTED_NATIVE_TOOLS = {
 EXPECTED_SKILLS = {
     "deepscientist:scout", "deepscientist:baseline", "deepscientist:idea", "deepscientist:optimize",
     "deepscientist:experiment", "deepscientist:analysis-campaign", "deepscientist:write", "deepscientist:finalize",
-    "deepscientist:decision", "deepscientist:figure-polish", "deepscientist:intake-audit", "deepscientist:review", "deepscientist:rebuttal",
+    "deepscientist:decision", "deepscientist:figure-polish", "deepscientist:paper-fetch", "deepscientist:intake-audit", "deepscientist:review", "deepscientist:rebuttal",
 }
 
 class FakeContext:

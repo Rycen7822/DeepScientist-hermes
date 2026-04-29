@@ -32,6 +32,7 @@ The target is one trustworthy baseline line, not an endless reproduction diary.
 - do not infer missing commands, scripts, or parameters when the uncertainty could change the result
 - any unavoidable guess must be written down explicitly with expected impact
 - use web search for discovering papers or repos, but use `artifact.arxiv(paper_id=..., full_text=False)` for actually reading a source arXiv paper when it exists
+- load `paper-fetch` when baseline discovery/reproduction needs arXiv/OpenReview PDF retrieval, authenticated OpenReview access, or official repo/dataset/checkpoint verification; do not load `clip` unless the user asked for `llm-wiki` archival
 - set `full_text=True` only when the short form is insufficient
 - for Python baselines, environment setup should be standardized around `uv`
 

@@ -82,7 +82,7 @@ _TOOL_BINDINGS = [
     (schemas.DEEPSCIENTIST_RESUME, tools.deepscientist_resume),
 ]
 
-_STAGE_SKILLS = ("scout", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision", "figure-polish", "intake-audit", "review", "rebuttal")
+_STAGE_SKILLS = ("scout", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision", "figure-polish", "paper-fetch", "intake-audit", "review", "rebuttal")
 
 
 def register(ctx) -> None:
