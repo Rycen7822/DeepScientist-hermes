@@ -225,6 +225,91 @@ Treat ACM DL as a primary metadata/source surface, but do not try to bypass acce
 - open twin URL and version if used, e.g. arXiv id/version;
 - whether the retrieved PDF is publisher VOR or an author/preprint version.
 
+## Unpaywall Fallback Route
+
+Use Unpaywall when primary/source-specific routes cannot provide a legal downloadable PDF:
+
+- publisher/platform database cannot be downloaded directly because of paywall, institutional login, Cloudflare/challenge, `403`, `404`, or rate limits;
+- arXiv has no matching paper or arXiv download fails;
+- GitHub does not expose a paper PDF;
+- the official project page does not host a paper PDF;
+- Crossref/OpenAlex metadata exists but no direct primary PDF is usable.
+
+Unpaywall is a fallback for legal open-access copies. Do not use it to fetch unauthorized mirrors. Preserve the publisher DOI/source as canonical when the Unpaywall location is a repository or submitted/accepted manuscript.
+
+### Email and secret handling
+
+Unpaywall requires a contact email. Never hard-code a user's email in this skill, source files, tests, reports, git commits, or examples.
+
+Read the email only from the local secret file:
+
+```text
+~/.hermes/secrets/research.env
+```
+
+Expected key:
+
+```text
+UNPAYWALL_EMAIL=<user email>
+```
+
+If `UNPAYWALL_EMAIL` is missing, stop and ask the user to provide an email, then tell them to add it to `~/.hermes/secrets/research.env` under the `UNPAYWALL_EMAIL` key. Do not guess, invent, or reuse unrelated credentials.
+
+Safe Python pattern:
+
+```python
+from pathlib import Path
+
+def read_unpaywall_email() -> str:
+    path = Path.home() / ".hermes" / "secrets" / "research.env"
+    if not path.exists():
+        raise RuntimeError("Missing ~/.hermes/secrets/research.env; ask user to add UNPAYWALL_EMAIL=<email>.")
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("UNPAYWALL_EMAIL="):
+            value = line.split("=", 1)[1].strip()
+            if value:
+                return value
+    raise RuntimeError("Missing UNPAYWALL_EMAIL in ~/.hermes/secrets/research.env; ask user to add it.")
+```
+
+Do not print the email in final replies unless the user explicitly asks to inspect their own local secret configuration. When reporting, say only that the email was read from the local secret file.
+
+### Query recipe
+
+```bash
+# Export UNPAYWALL_EMAIL from ~/.hermes/secrets/research.env in a wrapper script or Python subprocess env.
+# Do not commit or echo the concrete value.
+curl -s "https://api.unpaywall.org/v2/<doi>?email=$UNPAYWALL_EMAIL" \
+  | jq '{
+      doi,
+      title,
+      is_oa,
+      oa_status,
+      pdf: .best_oa_location.url_for_pdf,
+      landing: .best_oa_location.url,
+      host_type: .best_oa_location.host_type,
+      version: .best_oa_location.version
+    }'
+```
+
+### Preferred order
+
+1. Query Unpaywall by DOI with the email read from `~/.hermes/secrets/research.env`.
+2. Check `is_oa`, `oa_status`, `best_oa_location.url_for_pdf`, `best_oa_location.url`, `host_type`, and `version`.
+3. Prefer `url_for_pdf` when present; otherwise inspect `url`/landing page only if it is a legal open repository or publisher page.
+4. Download with `curl -L --http1.1 --fail --retry 3`.
+5. Verify PDF header (`%PDF`), file size, hash, and page count/text extraction with PyMuPDF or `pypdf`.
+6. Record whether the file is `publishedVersion`, `acceptedVersion`, `submittedVersion`, or another repository version.
+7. Caveat clearly when the downloaded file is not the publisher final PDF.
+
+### What to record
+
+- DOI and original source/platform route that failed or was unavailable;
+- Unpaywall `is_oa`, `oa_status`, `host_type`, `version`;
+- PDF URL and landing URL actually used;
+- file path, byte size, checksum, page count, and extraction status when downloaded;
+- version caveat, e.g. `repository submittedVersion`, `accepted manuscript`, or `publisher VOR`.
+
 ## Direct PDF / Other Hosts
 
 Treat direct PDFs as paper-reading requests, not webpage clipping.
