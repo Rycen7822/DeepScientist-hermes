@@ -39,6 +39,7 @@ _TOOL_BINDINGS = [
     (schemas.DS_GET_QUEST_STATE, tools.ds_get_quest_state),
     (schemas.DS_SET_ACTIVE_QUEST, tools.ds_set_active_quest),
     (schemas.DS_NEW_QUEST, tools.ds_new_quest),
+    (schemas.DS_UPDATE_QUEST_MODE, tools.ds_update_quest_mode),
     (schemas.DS_ADD_USER_MESSAGE, tools.ds_add_user_message),
     (schemas.DS_RECORD_USER_REQUIREMENT, tools.ds_record_user_requirement),
     (schemas.DS_READ_QUEST_DOCUMENTS, tools.ds_read_quest_documents),

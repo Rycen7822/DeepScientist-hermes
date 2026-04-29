@@ -81,6 +81,76 @@ def test_new_quest_rejects_invalid_agent_mode_contract():
     assert "workspace_mode" in payload["error"]
 
 
+def test_update_quest_mode_switches_existing_quest_without_new_quest():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import tools
+
+    created = parse_json(
+        tools.ds_new_quest(
+            {
+                "goal": "先用 copilot 打磨实验方案，后续再自主推进",
+                "quest_id": "mode-switch-existing-quest-test",
+            }
+        )
+    )
+    quest_id = created["quest"]["quest_id"]
+    assert created["workspace_mode"] == "copilot"
+
+    switched = parse_json(
+        tools.ds_update_quest_mode(
+            {
+                "quest_id": quest_id,
+                "workspace_mode": "autonomous",
+                "decision_policy": "autonomous",
+                "final_goal": "quality_result",
+                "delivery_mode": "experiment_execution",
+                "need_research_paper": False,
+                "completion_criteria": ["完成实验执行", "记录主要结果"],
+                "mode_rationale": "已有方案打磨完毕，现在由 Hermes 在同一研究项目内自主推进实验。",
+            }
+        )
+    )
+
+    assert switched["ok"] is True
+    assert switched["quest"]["quest_id"] == quest_id
+    assert switched["workspace_mode"] == "autonomous"
+    assert switched["decision_policy"] == "autonomous"
+    assert switched["final_goal"] == "quality_result"
+    assert switched["startup_contract"]["mode_selected_by"] == "hermes_agent"
+    assert switched["startup_contract"]["completion_criteria"] == ["完成实验执行", "记录主要结果"]
+
+    state = parse_json(tools.ds_get_quest_state({"quest_id": quest_id, "full": True}))
+    contract = state["snapshot"]["startup_contract"]
+    assert state["snapshot"]["quest_id"] == quest_id
+    assert contract["workspace_mode"] == "autonomous"
+    assert contract["final_goal"] == "quality_result"
+
+    back = parse_json(
+        tools.ds_update_quest_mode(
+            {
+                "quest_id": quest_id,
+                "workspace_mode": "copilot",
+                "mode_rationale": "实验推进暂停，回到用户门控协作模式。",
+            }
+        )
+    )
+    assert back["ok"] is True
+    assert back["workspace_mode"] == "copilot"
+    assert back["decision_policy"] == "user_gated"
+    assert back["quest"]["quest_id"] == quest_id
+
+
+def test_update_quest_mode_rejects_missing_rationale_for_autonomous():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import tools
+
+    quest_id = parse_json(tools.ds_new_quest({"goal": "Mode switch validation", "quest_id": "mode-switch-invalid-test"}))["quest"]["quest_id"]
+    payload = parse_json(tools.ds_update_quest_mode({"quest_id": quest_id, "workspace_mode": "autonomous"}))
+
+    assert payload["ok"] is False
+    assert "mode_rationale" in payload["error"]
+
+
 def test_record_only_user_requirement_does_not_leave_pending_queue():
     load_plugin()
     from hermes_plugins.deepscientist_native import tools

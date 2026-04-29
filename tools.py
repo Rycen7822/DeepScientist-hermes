@@ -627,6 +627,83 @@ def ds_new_quest(args: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+@_guard
+def ds_update_quest_mode(args: dict[str, Any]) -> dict[str, Any]:
+    if err := _require(args, "quest_id", "workspace_mode"):
+        return {"ok": False, "error": err}
+    workspace_mode = str(args.get("workspace_mode") or "").strip().lower()
+    if workspace_mode not in WORKSPACE_MODE_VALUES:
+        return {"ok": False, "error": "workspace_mode must be one of: autonomous, copilot."}
+
+    existing_contract: dict[str, Any] = {}
+    services = get_services()
+    quest_id = str(args.get("quest_id") or "").strip()
+    snapshot_before = services.quest.snapshot(quest_id)
+    if isinstance(snapshot_before.get("startup_contract"), dict):
+        existing_contract = dict(snapshot_before.get("startup_contract") or {})
+
+    raw_decision_policy = str(args.get("decision_policy") or "").strip().lower()
+    if raw_decision_policy and raw_decision_policy not in DECISION_POLICY_VALUES:
+        return {"ok": False, "error": "decision_policy must be one of: autonomous, user_gated."}
+    decision_policy = raw_decision_policy or ("autonomous" if workspace_mode == "autonomous" else "user_gated")
+
+    raw_final_goal = str(args.get("final_goal") or existing_contract.get("final_goal") or "open_ended").strip().lower()
+    if raw_final_goal not in FINAL_GOAL_VALUES:
+        return {"ok": False, "error": "final_goal must be one of: paper, quality_result, idea_optimization, literature_scout, baseline_reproduction, analysis_report, open_ended."}
+    final_goal = raw_final_goal
+
+    need_research_paper = _optional_bool(
+        args,
+        "need_research_paper",
+        bool(existing_contract.get("need_research_paper", final_goal == "paper")),
+    )
+    delivery_mode = str(args.get("delivery_mode") or existing_contract.get("delivery_mode") or ("paper_bundle" if need_research_paper else final_goal)).strip()
+    completion_criteria = _clean_string_list(args.get("completion_criteria"))
+    if not completion_criteria and isinstance(existing_contract.get("completion_criteria"), list):
+        completion_criteria = _clean_string_list(existing_contract.get("completion_criteria"))
+
+    raw_user_contract = args.get("startup_contract")
+    user_contract = dict(raw_user_contract) if isinstance(raw_user_contract, dict) else {}
+    mode_rationale = str(args.get("mode_rationale") or user_contract.get("mode_rationale") or "").strip()
+    if not mode_rationale and workspace_mode == "copilot":
+        mode_rationale = "agent_selected_copilot: Hermes returned this quest to user-gated copilot mode without changing the quest identity."
+    if workspace_mode == "autonomous" and not mode_rationale:
+        return {"ok": False, "error": "mode_rationale is required when switching an existing quest to autonomous mode."}
+
+    startup_contract = {
+        **existing_contract,
+        **user_contract,
+        "workspace_mode": workspace_mode,
+        "decision_policy": decision_policy,
+        "need_research_paper": need_research_paper,
+        "final_goal": final_goal,
+        "delivery_mode": delivery_mode,
+        "completion_criteria": completion_criteria,
+        "mode_selected_by": "hermes_agent",
+        "mode_rationale": mode_rationale,
+    }
+    snapshot = services.quest.update_settings(
+        quest_id,
+        workspace_mode=workspace_mode,
+        decision_policy=decision_policy,
+        need_research_paper=need_research_paper,
+        final_goal=final_goal,
+        delivery_mode=delivery_mode,
+        completion_criteria=completion_criteria,
+        mode_rationale=mode_rationale,
+        startup_contract=startup_contract,
+    )
+    StateStore().set_active_quest(quest_id, _session_id(args), active_stage=str(snapshot.get("active_anchor") or "scout"))
+    return {
+        "quest": compact_snapshot(snapshot),
+        "workspace_mode": workspace_mode,
+        "decision_policy": decision_policy,
+        "final_goal": final_goal,
+        "delivery_mode": delivery_mode,
+        "startup_contract": startup_contract,
+    }
+
+
 def _add_user_message_payload(args: dict[str, Any]) -> dict[str, Any]:
     if err := _require(args, "message"):
         return {"ok": False, "error": err}

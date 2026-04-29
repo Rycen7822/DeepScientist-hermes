@@ -9,6 +9,7 @@ provides_tools:
   - ds_get_quest_state
   - ds_set_active_quest
   - ds_new_quest
+  - ds_update_quest_mode
   - ds_add_user_message
   - ds_record_user_requirement
   - ds_read_quest_documents

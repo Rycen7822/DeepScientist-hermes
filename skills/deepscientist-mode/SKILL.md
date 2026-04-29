@@ -65,7 +65,8 @@ Do not assume a shared DeepScientist home. If state appears missing, first check
 4. `ds_set_active_quest`.
 5. `ds_get_quest_state`.
 6. Use `ds_memory_search` for prior conclusions, constraints, baseline choices, and experimental setup.
-7. Continue work and write durable updates.
+7. If the same research project moves from user-gated planning to autonomous execution, or back to review, call `ds_update_quest_mode` on the existing quest. Do not create a new quest just to change modes.
+8. Continue work and write durable updates.
 
 ### Creating a new quest
 
@@ -86,6 +87,23 @@ After creation:
 2. Set or infer the starting stage, usually `scout`, `baseline`, or `idea`.
 3. Write initial constraints and known facts with `ds_memory_write`.
 
+### Switching mode inside the same quest
+
+A quest is the research-project boundary, not a single question and not a fixed execution mode. For follow-up requests inside the same research project, keep the same quest and switch its mode when the phase changes.
+
+Use `ds_update_quest_mode` when:
+
+- Copilot planning/doc editing/experiment design has converged and Hermes should start autonomous experiment execution.
+- Autonomous execution should pause and return to user-gated review or plan revision.
+- The terminal goal for the next phase changes while the project identity stays the same.
+
+Rules:
+
+- Do not create a new quest merely to switch between `copilot` and `autonomous`.
+- Switching to autonomous requires `mode_rationale`; also provide `final_goal`, `delivery_mode`, and concrete `completion_criteria` whenever possible.
+- Autonomous still does not imply paper writing. For experiment execution use `final_goal="quality_result"`, `delivery_mode="experiment_execution"`, and `need_research_paper=false` unless the user explicitly asks for a paper.
+- Switching back to copilot defaults to `decision_policy="user_gated"` and should preserve the same quest id.
+
 ## 工具选择规则
 
 Use DeepScientist tools when the result should be part of the durable research record:
@@ -95,6 +113,7 @@ Use DeepScientist tools when the result should be part of the durable research r
 - `ds_new_quest`: create a quest.
 - `ds_set_active_quest`: bind this Hermes session to a quest.
 - `ds_get_quest_state`: inspect current state.
+- `ds_update_quest_mode`: switch an existing quest between copilot/autonomous without changing quest identity; use for phase transitions inside the same research project.
 - `ds_add_user_message`: append user instructions to a quest. Use `record_only=true` when the instruction should be durable context but should not wake/queue a pending user message.
 - `ds_record_user_requirement`: record durable user requirements into quest conversation and `active-user-requirements.md` without leaving `pending_user_message_count > 0`.
 - `ds_memory_search`: search project/quest memory.

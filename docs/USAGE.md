@@ -94,7 +94,8 @@ DeepScientist 原生插件默认使用：
 4. `ds_set_active_quest` 绑定。
 5. `ds_get_quest_state` 读取 compact state。
 6. 必要时用 `ds_memory_search` 查找旧结论、实验配置、baseline 约束。
-7. 继续推进，并把新决策写回 `ds_memory_write` 或对应 artifact 工具。
+7. 如果当前研究项目要从协作规划转为无人值守推进，或从无人值守回到协作审阅，调用 `ds_update_quest_mode` 切换同一个 quest 的 `workspace_mode`，不要新建 quest。
+8. 继续推进，并把新决策写回 `ds_memory_write` 或对应 artifact 工具。
 
 ### 3.3 新 quest 的创建标准
 
@@ -120,13 +121,38 @@ DeepScientist 原生插件默认使用：
 2. 根据任务设置 active stage，通常从 `scout`、`baseline` 或 `idea` 开始。
 3. 用 `ds_memory_write` 写入初始背景、用户约束、数据/代码路径、评价标准。
 
+### 3.4 同一 quest 内切换 copilot/autonomous
+
+quest 表示研究项目边界，不表示某一次追问或某一种执行模式。后续追问如果仍属于同一个研究项目，应继续使用同一个 quest，并由 Hermes agent 按当前阶段切换模式：
+
+- 从方案讨论、文档打磨、实验设计进入批量实验执行时，调用 `ds_update_quest_mode`，设置 `workspace_mode="autonomous"`。
+- autonomous 切换必须提供 `mode_rationale`，并应提供下一阶段的 `final_goal`、`delivery_mode`、`completion_criteria`；这用于说明 agent 为什么可以在同一个 quest 内接管多步推进，以及何时停止。
+- 切换为 autonomous 不等于切换成论文目标；若只是推进实验或复现，应保持 `need_research_paper=false`，例如 `final_goal="quality_result"`、`delivery_mode="experiment_execution"`。
+- 从无人值守推进回到用户审阅、方案修订、风险确认时，调用 `ds_update_quest_mode`，设置 `workspace_mode="copilot"`；默认 `decision_policy="user_gated"`。
+- 不要为了切换模式创建新 quest。只有研究目标/项目本身变化时才创建新 quest。
+
+示例：
+
+```json
+{
+  "quest_id": "my-research-project",
+  "workspace_mode": "autonomous",
+  "decision_policy": "autonomous",
+  "final_goal": "quality_result",
+  "delivery_mode": "experiment_execution",
+  "need_research_paper": false,
+  "completion_criteria": ["完成约定实验 sweep", "记录最优配置和失败配置", "产出结果表和下一步建议"],
+  "mode_rationale": "方案已在 copilot 阶段收敛，现在由 Hermes 在同一研究项目内自主执行实验。"
+}
+```
+
 ## 4. 何时使用 DeepScientist 工具，何时使用 Hermes 原生工具
 
 ### 4.1 使用 DeepScientist `ds_*` 工具
 
 当信息需要成为 DeepScientist quest 的持久状态时，用 `ds_*` 工具：
 
-- quest 创建、绑定、暂停、恢复、停止。
+- quest 创建、绑定、模式切换、暂停、恢复、停止。
 - 研究阶段和 quest state 读取。
 - 项目记忆和 quest 记忆。
 - baseline gate、idea、experiment、analysis campaign、paper bundle。

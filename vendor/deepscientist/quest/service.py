@@ -3910,6 +3910,13 @@ class QuestService:
         active_anchor: str | None = None,
         default_runner: str | None = None,
         workspace_mode: str | None = None,
+        decision_policy: str | None = None,
+        need_research_paper: bool | None = None,
+        final_goal: str | None = None,
+        delivery_mode: str | None = None,
+        completion_criteria: list[str] | None = None,
+        mode_rationale: str | None = None,
+        startup_contract: dict[str, Any] | None = None,
     ) -> dict:
         quest_root = self._quest_root(quest_id)
         quest_yaml_path = self._quest_yaml_path(quest_root)
@@ -3961,14 +3968,29 @@ class QuestService:
             normalized_workspace_mode = str(workspace_mode).strip().lower()
             if normalized_workspace_mode not in {"copilot", "autonomous"}:
                 raise ValueError("Unsupported workspace mode. Allowed values: copilot, autonomous.")
-            startup_contract = (
+            existing_contract = (
                 dict(quest_data.get("startup_contract") or {})
                 if isinstance(quest_data.get("startup_contract"), dict)
                 else {}
             )
-            if str(startup_contract.get("workspace_mode") or "").strip().lower() != normalized_workspace_mode:
-                startup_contract["workspace_mode"] = normalized_workspace_mode
-                quest_data["startup_contract"] = startup_contract
+            contract_updates: dict[str, Any] = dict(startup_contract or {}) if isinstance(startup_contract, dict) else {}
+            contract_updates["workspace_mode"] = normalized_workspace_mode
+            if decision_policy is not None:
+                contract_updates["decision_policy"] = str(decision_policy).strip().lower()
+            if need_research_paper is not None:
+                contract_updates["need_research_paper"] = bool(need_research_paper)
+            if final_goal is not None:
+                contract_updates["final_goal"] = str(final_goal).strip().lower()
+            if delivery_mode is not None:
+                contract_updates["delivery_mode"] = str(delivery_mode).strip()
+            if completion_criteria is not None:
+                contract_updates["completion_criteria"] = list(completion_criteria)
+            if mode_rationale is not None:
+                contract_updates["mode_rationale"] = str(mode_rationale).strip()
+            contract_updates.setdefault("mode_selected_by", "hermes_agent")
+            updated_contract = {**existing_contract, **contract_updates}
+            if existing_contract != updated_contract:
+                quest_data["startup_contract"] = updated_contract
                 changed = True
             if str(self.read_research_state(quest_root).get("workspace_mode") or "").strip().lower() != normalized_workspace_mode:
                 research_state_updates["workspace_mode"] = normalized_workspace_mode

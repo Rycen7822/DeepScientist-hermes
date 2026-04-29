@@ -73,6 +73,22 @@ DS_NEW_QUEST = _schema(
     },
     ["goal"],
 )
+DS_UPDATE_QUEST_MODE = _schema(
+    "ds_update_quest_mode",
+    "Switch an existing DeepScientist quest between copilot and autonomous without creating or changing the quest. Use when the same research project moves from user-gated planning to autonomous execution, or back to copilot review.",
+    {
+        "quest_id": S["quest_id"],
+        "workspace_mode": {"type": "string", "enum": ["copilot", "autonomous"], "description": "Agent-chosen mode for this existing quest."},
+        "decision_policy": {"type": "string", "enum": ["user_gated", "autonomous"], "description": "Defaults to user_gated for copilot and autonomous for autonomous."},
+        "need_research_paper": {"type": "boolean", "description": "Whether this mode switch makes a paper bundle the terminal goal. Do not infer this from autonomous alone."},
+        "final_goal": {"type": "string", "enum": ["paper", "quality_result", "idea_optimization", "literature_scout", "baseline_reproduction", "analysis_report", "open_ended"], "description": "Terminal objective for the next phase, separate from workspace_mode."},
+        "delivery_mode": {"type": "string", "description": "Delivery label for the next phase, such as experiment_execution, quality_result, analysis_report, or paper_bundle."},
+        "completion_criteria": {"type": "array", "items": {"type": "string"}, "description": "Concrete criteria for determining the autonomous phase is complete."},
+        "mode_rationale": {"type": "string", "description": "Required when switching to autonomous; short explanation of why Hermes should own progress in the same quest."},
+        "startup_contract": {"type": "object", "description": "Optional advanced contract fields to merge into the existing quest startup contract."},
+    },
+    ["quest_id", "workspace_mode"],
+)
 DS_ADD_USER_MESSAGE = _schema("ds_add_user_message", "Append a user message/instruction to a quest conversation. Set record_only=true for durable requirements that must not be queued as pending user input.", {"quest_id": S["quest_id"], "message": S["message"], "source": {"type": "string"}, "stage": S["stage"], "record_only": {"type": "boolean", "default": False}, "delivery_state": {"type": "string", "enum": ["sent", "record_only"]}}, ["message"])
 DS_RECORD_USER_REQUIREMENT = _schema("ds_record_user_requirement", "Record a durable user requirement in the quest conversation and active-user-requirements memory without leaving a pending user-message queue item.", {"quest_id": S["quest_id"], "message": S["message"], "source": {"type": "string"}, "stage": S["stage"]}, ["message"])
 DS_READ_QUEST_DOCUMENTS = _schema("ds_read_quest_documents", "List or read quest documents and skill docs.", {"quest_id": S["quest_id"], "names": {"type": "array", "items": {"type": "string"}}, "include_content": {"type": "boolean", "default": True}, "max_chars": {"type": "integer", "default": 12000}})
@@ -116,7 +132,7 @@ DEEPSCIENTIST_PAUSE = {**DS_PAUSE_QUEST, "name": "deepscientist_pause"}
 DEEPSCIENTIST_RESUME = {**DS_RESUME_QUEST, "name": "deepscientist_resume"}
 
 NATIVE_SCHEMAS = [
-    DS_DOCTOR, DS_LIST_QUESTS, DS_GET_QUEST_STATE, DS_SET_ACTIVE_QUEST, DS_NEW_QUEST,
+    DS_DOCTOR, DS_LIST_QUESTS, DS_GET_QUEST_STATE, DS_SET_ACTIVE_QUEST, DS_NEW_QUEST, DS_UPDATE_QUEST_MODE,
     DS_ADD_USER_MESSAGE, DS_RECORD_USER_REQUIREMENT, DS_READ_QUEST_DOCUMENTS, DS_MEMORY_SEARCH, DS_MEMORY_READ,
     DS_MEMORY_WRITE, DS_ARTIFACT_RECORD, DS_CONFIRM_BASELINE, DS_WAIVE_BASELINE,
     DS_ATTACH_BASELINE, DS_CREATE_LOCAL_BASELINE, DS_SUBMIT_IDEA, DS_LIST_RESEARCH_BRANCHES, DS_RECORD_MAIN_EXPERIMENT,
