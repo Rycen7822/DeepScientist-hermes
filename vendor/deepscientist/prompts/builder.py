@@ -817,6 +817,41 @@ class PromptBuilder:
         return True
 
     @staticmethod
+    def _final_goal(snapshot: dict) -> str:
+        startup_contract = snapshot.get("startup_contract")
+        if isinstance(startup_contract, dict):
+            value = str(startup_contract.get("final_goal") or "").strip().lower()
+            if value in {"paper", "quality_result", "idea_optimization", "literature_scout", "baseline_reproduction", "analysis_report", "open_ended"}:
+                return value
+        return "paper" if PromptBuilder._need_research_paper(snapshot) else "open_ended"
+
+    @staticmethod
+    def _delivery_mode(snapshot: dict) -> str:
+        startup_contract = snapshot.get("startup_contract")
+        if isinstance(startup_contract, dict):
+            value = str(startup_contract.get("delivery_mode") or "").strip()
+            if value:
+                return value
+        return "paper_bundle" if PromptBuilder._need_research_paper(snapshot) else PromptBuilder._final_goal(snapshot)
+
+    @staticmethod
+    def _completion_criteria(snapshot: dict) -> list[str]:
+        startup_contract = snapshot.get("startup_contract")
+        if not isinstance(startup_contract, dict):
+            return []
+        raw = startup_contract.get("completion_criteria")
+        if not isinstance(raw, list):
+            return []
+        return [str(item).strip() for item in raw if str(item or "").strip()]
+
+    @staticmethod
+    def _mode_rationale(snapshot: dict) -> str:
+        startup_contract = snapshot.get("startup_contract")
+        if not isinstance(startup_contract, dict):
+            return ""
+        return str(startup_contract.get("mode_rationale") or "").strip()
+
+    @staticmethod
     def _workspace_mode(snapshot: dict) -> str:
         value = str(snapshot.get("workspace_mode") or "").strip().lower()
         if value in {"copilot", "autonomous"}:
@@ -911,22 +946,32 @@ class PromptBuilder:
         baseline_execution_policy = self._baseline_execution_policy(snapshot)
         review_followup_policy = self._review_followup_policy(snapshot)
         manuscript_edit_mode = self._manuscript_edit_mode(snapshot)
+        final_goal = self._final_goal(snapshot)
+        delivery_mode = self._delivery_mode(snapshot)
+        completion_criteria = self._completion_criteria(snapshot)
+        mode_rationale = self._mode_rationale(snapshot)
         lines = [
             f"- need_research_paper: {need_research_paper}",
+            f"- final_goal: {final_goal}",
+            f"- delivery_mode: {delivery_mode}",
             f"- launch_mode: {launch_mode}",
             f"- standard_profile: {standard_profile if launch_mode == 'standard' else 'n/a'}",
             f"- custom_profile: {custom_profile if launch_mode == 'custom' else 'n/a'}",
             f"- review_followup_policy: {review_followup_policy if custom_profile == 'review_audit' else 'n/a'}",
             f"- baseline_execution_policy: {baseline_execution_policy if launch_mode == 'custom' else 'n/a'}",
             f"- manuscript_edit_mode: {manuscript_edit_mode if custom_profile in {'review_audit', 'revision_rebuttal'} else 'n/a'}",
-            f"- delivery_mode: {'paper_required' if need_research_paper else 'algorithm_first'}",
+            f"- mode_rationale: {mode_rationale or 'n/a'}",
             "- requested_skill_rule: stage-specific execution detail lives in the requested skill; this block only adds runtime launch policy.",
             "- idea_stage_rule: every accepted idea submission should normally create a new branch/worktree and a new user-visible research node.",
             "- lineage_rule: normal idea routing uses exactly two lineage intents: `continue_line` creates a child of the current active branch; `branch_alternative` creates a sibling-like branch from the current branch's parent foundation.",
             "- revise_rule: `artifact.submit_idea(mode='revise', ...)` is maintenance-only compatibility for the same branch and should not be the default research-route mechanism.",
             "- post_main_result_rule: after every `artifact.record_main_experiment(...)`, first interpret the measured result and only then choose the next route.",
             "- foundation_selection_rule: for a genuinely new idea round, default to the current research head but feel free to choose another durable foundation when it is cleaner or stronger; inspect `artifact.list_research_branches(...)` first when the best foundation is not obvious.",
+            "- final_goal_rule: autonomous ownership does not imply paper output; do not silently convert a non-paper final_goal into paper writing unless the user explicitly broadens scope.",
         ]
+        if completion_criteria:
+            lines.append("- completion_criteria:")
+            lines.extend(f"  {idx}. {item}" for idx, item in enumerate(completion_criteria, start=1))
         if launch_mode == "custom":
             lines.extend(
                 [

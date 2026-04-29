@@ -54,7 +54,25 @@ DS_DOCTOR = _schema("ds_doctor", "Run native DeepScientist plugin diagnostics wi
 DS_LIST_QUESTS = _schema("ds_list_quests", "List DeepScientist quests from the native runtime home.", {"limit": S["limit"]})
 DS_GET_QUEST_STATE = _schema("ds_get_quest_state", "Read compact or full state for a DeepScientist quest.", {"quest_id": S["quest_id"], "full": {"type": "boolean", "default": False}})
 DS_SET_ACTIVE_QUEST = _schema("ds_set_active_quest", "Set the active quest for the current Hermes session.", {"quest_id": S["quest_id"], "session_id": {"type": "string"}, "stage": S["stage"]}, ["quest_id"])
-DS_NEW_QUEST = _schema("ds_new_quest", "Create a new DeepScientist quest natively.", {"goal": S["goal"], "quest_id": S["quest_id"], "title": S["title"], "session_id": {"type": "string"}}, ["goal"])
+DS_NEW_QUEST = _schema(
+    "ds_new_quest",
+    "Create a new DeepScientist quest natively. This tool is agent-managed: default to copilot unless the Hermes agent explicitly chooses autonomous and supplies the final-goal contract.",
+    {
+        "goal": S["goal"],
+        "quest_id": S["quest_id"],
+        "title": S["title"],
+        "session_id": {"type": "string"},
+        "workspace_mode": {"type": "string", "enum": ["copilot", "autonomous"], "description": "Agent-chosen mode. Omit for safe default copilot; pass autonomous only when Hermes should own multi-step progress."},
+        "decision_policy": {"type": "string", "enum": ["user_gated", "autonomous"], "description": "Agent-chosen decision policy. Defaults to user_gated for copilot and autonomous for autonomous."},
+        "need_research_paper": {"type": "boolean", "default": False, "description": "Whether paper-like output is a default terminal goal. Defaults false unless the agent explicitly chooses a paper goal."},
+        "final_goal": {"type": "string", "enum": ["paper", "quality_result", "idea_optimization", "literature_scout", "baseline_reproduction", "analysis_report", "open_ended"], "description": "Agent-defined terminal objective, separate from workspace_mode."},
+        "delivery_mode": {"type": "string", "description": "Short agent-defined delivery label such as idea_quality, literature_map, quality_result, or paper_bundle."},
+        "completion_criteria": {"type": "array", "items": {"type": "string"}, "description": "Concrete criteria the agent will use to decide that the autonomous task is sufficiently complete."},
+        "mode_rationale": {"type": "string", "description": "Short explanation of why Hermes selected the mode and final-goal contract."},
+        "startup_contract": {"type": "object", "description": "Optional advanced contract fields; explicit values override generated defaults."},
+    },
+    ["goal"],
+)
 DS_ADD_USER_MESSAGE = _schema("ds_add_user_message", "Append a user message/instruction to a quest conversation. Set record_only=true for durable requirements that must not be queued as pending user input.", {"quest_id": S["quest_id"], "message": S["message"], "source": {"type": "string"}, "stage": S["stage"], "record_only": {"type": "boolean", "default": False}, "delivery_state": {"type": "string", "enum": ["sent", "record_only"]}}, ["message"])
 DS_RECORD_USER_REQUIREMENT = _schema("ds_record_user_requirement", "Record a durable user requirement in the quest conversation and active-user-requirements memory without leaving a pending user-message queue item.", {"quest_id": S["quest_id"], "message": S["message"], "source": {"type": "string"}, "stage": S["stage"]}, ["message"])
 DS_READ_QUEST_DOCUMENTS = _schema("ds_read_quest_documents", "List or read quest documents and skill docs.", {"quest_id": S["quest_id"], "names": {"type": "array", "items": {"type": "string"}}, "include_content": {"type": "boolean", "default": True}, "max_chars": {"type": "integer", "default": 12000}})

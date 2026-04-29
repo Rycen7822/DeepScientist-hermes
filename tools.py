@@ -177,6 +177,89 @@ def _truthy(value: Any) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _optional_bool(args: dict[str, Any], name: str, default: bool) -> bool:
+    if name not in args or args.get(name) is None:
+        return default
+    if isinstance(args.get(name), bool):
+        return bool(args[name])
+    return _truthy(args.get(name))
+
+
+def _clean_string_list(value: Any) -> list[str]:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        raw = value.strip()
+        if not raw:
+            return []
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, list):
+            values = parsed
+        else:
+            values = [part.strip() for part in raw.split("\n") if part.strip()]
+    elif isinstance(value, (list, tuple, set)):
+        values = list(value)
+    else:
+        values = [value]
+    cleaned: list[str] = []
+    for item in values:
+        text = str(item or "").strip()
+        if text:
+            cleaned.append(text)
+    return cleaned
+
+
+WORKSPACE_MODE_VALUES = {"copilot", "autonomous"}
+DECISION_POLICY_VALUES = {"user_gated", "autonomous"}
+FINAL_GOAL_VALUES = {"paper", "quality_result", "idea_optimization", "literature_scout", "baseline_reproduction", "analysis_report", "open_ended"}
+
+
+def _build_startup_contract(args: dict[str, Any]) -> dict[str, Any] | tuple[None, str]:
+    raw_workspace_mode = str(args.get("workspace_mode") or "").strip().lower()
+    if raw_workspace_mode and raw_workspace_mode not in WORKSPACE_MODE_VALUES:
+        return None, "workspace_mode must be one of: autonomous, copilot. Omit it for the safe default copilot mode."
+    workspace_mode = raw_workspace_mode or "copilot"
+
+    raw_decision_policy = str(args.get("decision_policy") or "").strip().lower()
+    if raw_decision_policy and raw_decision_policy not in DECISION_POLICY_VALUES:
+        return None, "decision_policy must be one of: autonomous, user_gated."
+    decision_policy = raw_decision_policy or ("autonomous" if workspace_mode == "autonomous" else "user_gated")
+
+    raw_final_goal = str(args.get("final_goal") or "").strip().lower()
+    if raw_final_goal and raw_final_goal not in FINAL_GOAL_VALUES:
+        return None, "final_goal must be one of: paper, quality_result, idea_optimization, literature_scout, baseline_reproduction, analysis_report, open_ended."
+    final_goal = raw_final_goal or "open_ended"
+
+    need_research_paper = _optional_bool(args, "need_research_paper", final_goal == "paper")
+    delivery_mode = str(args.get("delivery_mode") or "").strip() or ("paper_bundle" if need_research_paper else final_goal)
+    mode_rationale = str(args.get("mode_rationale") or "").strip() or (
+        "default_copilot: workspace_mode was omitted, so the Hermes-managed DeepScientist quest starts in request-scoped copilot mode without a default paper goal."
+        if workspace_mode == "copilot"
+        else "agent_selected_autonomous: Hermes selected autonomous mode for multi-step progress ownership."
+    )
+    completion_criteria = _clean_string_list(args.get("completion_criteria"))
+
+    contract: dict[str, Any] = {
+        "workspace_mode": workspace_mode,
+        "decision_policy": decision_policy,
+        "need_research_paper": need_research_paper,
+        "final_goal": final_goal,
+        "delivery_mode": delivery_mode,
+        "completion_criteria": completion_criteria,
+        "mode_selected_by": "hermes_agent",
+        "mode_rationale": mode_rationale,
+    }
+    if workspace_mode == "autonomous" and not need_research_paper and final_goal == "quality_result":
+        contract.setdefault("standard_profile", "optimization_task")
+    user_contract = args.get("startup_contract")
+    if isinstance(user_contract, dict):
+        contract.update(user_contract)
+    return contract
+
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
@@ -520,15 +603,28 @@ def ds_set_active_quest(args: dict[str, Any]) -> dict[str, Any]:
 def ds_new_quest(args: dict[str, Any]) -> dict[str, Any]:
     if err := _require(args, "goal"):
         return {"ok": False, "error": err}
+    startup_contract = _build_startup_contract(args)
+    if isinstance(startup_contract, tuple):
+        _none, message = startup_contract
+        return {"ok": False, "error": message}
     services = get_services()
     snapshot = services.quest.create(
         str(args.get("goal") or ""),
         quest_id=str(args.get("quest_id") or "").strip() or None,
         runner="hermes",
         title=str(args.get("title") or "").strip() or None,
+        startup_contract=startup_contract,
     )
     state = StateStore().set_active_quest(str(snapshot.get("quest_id")), _session_id(args), active_stage=str(snapshot.get("active_anchor") or "scout"))
-    return {"quest": compact_snapshot(snapshot), "state": state}
+    return {
+        "quest": compact_snapshot(snapshot),
+        "state": state,
+        "workspace_mode": startup_contract.get("workspace_mode"),
+        "decision_policy": startup_contract.get("decision_policy"),
+        "final_goal": startup_contract.get("final_goal"),
+        "delivery_mode": startup_contract.get("delivery_mode"),
+        "startup_contract": startup_contract,
+    }
 
 
 def _add_user_message_payload(args: dict[str, Any]) -> dict[str, Any]:

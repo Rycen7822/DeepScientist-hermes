@@ -6,6 +6,81 @@ from pathlib import Path
 from conftest import load_plugin, parse_json
 
 
+def test_new_quest_defaults_to_agent_managed_copilot_without_paper_goal():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import tools
+
+    payload = parse_json(tools.ds_new_quest({"goal": "帮我检查这个研究仓库的 baseline 是否合理", "quest_id": "default-copilot-test"}))
+
+    assert payload["ok"] is True
+    assert payload["workspace_mode"] == "copilot"
+    assert payload["decision_policy"] == "user_gated"
+    assert payload["final_goal"] == "open_ended"
+    assert payload["startup_contract"]["mode_selected_by"] == "hermes_agent"
+    assert payload["startup_contract"]["need_research_paper"] is False
+    assert "default_copilot" in payload["startup_contract"]["mode_rationale"]
+
+    state = parse_json(tools.ds_get_quest_state({"quest_id": "default-copilot-test", "full": True}))
+    contract = state["snapshot"]["startup_contract"]
+    assert contract["workspace_mode"] == "copilot"
+    assert contract["decision_policy"] == "user_gated"
+    assert contract["need_research_paper"] is False
+
+
+def test_new_quest_accepts_agent_chosen_autonomous_custom_goal_contract():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import tools
+
+    payload = parse_json(
+        tools.ds_new_quest(
+            {
+                "goal": "持续调研这个方向并把 idea 打磨到高质量",
+                "quest_id": "autonomous-idea-test",
+                "workspace_mode": "autonomous",
+                "decision_policy": "autonomous",
+                "need_research_paper": False,
+                "final_goal": "idea_optimization",
+                "delivery_mode": "idea_quality",
+                "completion_criteria": [
+                    "形成结构化文献地图",
+                    "筛选 3 个高质量 idea",
+                    "给出最推荐的验证路径",
+                ],
+                "mode_rationale": "用户希望我主动持续推进 idea 质量，不默认写论文。",
+            }
+        )
+    )
+
+    assert payload["ok"] is True
+    assert payload["workspace_mode"] == "autonomous"
+    assert payload["decision_policy"] == "autonomous"
+    assert payload["final_goal"] == "idea_optimization"
+    assert payload["delivery_mode"] == "idea_quality"
+    assert payload["startup_contract"]["need_research_paper"] is False
+    assert payload["startup_contract"]["completion_criteria"] == [
+        "形成结构化文献地图",
+        "筛选 3 个高质量 idea",
+        "给出最推荐的验证路径",
+    ]
+
+    state = parse_json(tools.ds_get_quest_state({"quest_id": "autonomous-idea-test", "full": True}))
+    contract = state["snapshot"]["startup_contract"]
+    assert contract["workspace_mode"] == "autonomous"
+    assert contract["final_goal"] == "idea_optimization"
+    assert contract["delivery_mode"] == "idea_quality"
+    assert contract["need_research_paper"] is False
+
+
+def test_new_quest_rejects_invalid_agent_mode_contract():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import tools
+
+    payload = parse_json(tools.ds_new_quest({"goal": "Invalid mode smoke", "quest_id": "invalid-mode-test", "workspace_mode": "auto"}))
+
+    assert payload["ok"] is False
+    assert "workspace_mode" in payload["error"]
+
+
 def test_record_only_user_requirement_does_not_leave_pending_queue():
     load_plugin()
     from hermes_plugins.deepscientist_native import tools

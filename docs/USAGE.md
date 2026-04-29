@@ -104,6 +104,16 @@ DeepScientist 原生插件默认使用：
 - 当前项目没有可复用 quest。
 - 旧 quest 与新任务目标不同，复用会混淆状态。
 
+模式与终点目标由 Hermes agent 主动填写，不要求用户手工选择：
+
+- 默认 `workspace_mode="copilot"`，`decision_policy="user_gated"`，`need_research_paper=false`，`final_goal="open_ended"`。也就是说，新 quest 默认只完成当前请求单元，不自动展开成无人值守长期研究或论文写作。
+- 只有当用户明确要求无人值守、长期推进、端到端完成，或 agent 判断任务边界清晰且继续推进不会带来明显成本/风险时，才选择 `workspace_mode="autonomous"`。
+- `workspace_mode` 只表示推进权限；`final_goal` 表示终局目标。选择 autonomous 不等于默认写论文。
+- 非论文目标应显式设置，例如 `final_goal="idea_optimization"`、`"literature_scout"`、`"baseline_reproduction"`、`"analysis_report"` 或 `"quality_result"`，并保持 `need_research_paper=false`。
+- 只有用户明确要求论文、投稿、paper bundle 或论文式交付时，才设置 `final_goal="paper"` 或 `need_research_paper=true`。
+- agent 选择 autonomous 时应同时填写 `mode_rationale`、`delivery_mode` 和具体 `completion_criteria`，便于后续审计和收敛。
+- `startup_contract` 可用于高级覆盖，但仍应保留上述语义：推进权限和终局目标分离。
+
 创建后立即：
 
 1. 用 `ds_get_quest_state` 读取初始状态。

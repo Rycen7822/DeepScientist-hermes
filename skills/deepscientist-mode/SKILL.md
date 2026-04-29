@@ -70,6 +70,16 @@ Do not assume a shared DeepScientist home. If state appears missing, first check
 ### Creating a new quest
 
 Use `ds_new_quest` when the user gives a new research goal and no existing quest clearly matches.
+Hermes chooses the mode contract; do not make the user type a mode command for normal use.
+
+Defaults and overrides:
+
+- Default is `workspace_mode="copilot"`, `decision_policy="user_gated"`, `need_research_paper=false`, `final_goal="open_ended"`.
+- Choose `workspace_mode="autonomous"` only when the task should be owned across multiple steps without stopping after the current request unit.
+- Keep `workspace_mode` separate from `final_goal`: autonomous does not imply paper writing.
+- For autonomous non-paper tasks, explicitly set `final_goal` such as `idea_optimization`, `literature_scout`, `baseline_reproduction`, `analysis_report`, or `quality_result`, plus `delivery_mode`, `completion_criteria`, and `mode_rationale`.
+- Set `final_goal="paper"` or `need_research_paper=true` only for explicit paper/posting/paper-bundle goals.
+
 After creation:
 
 1. `ds_get_quest_state`.
