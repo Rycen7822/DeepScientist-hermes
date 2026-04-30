@@ -860,6 +860,60 @@ def non_main_track(title, venue):
     checks = [("workshop", "workshop_or_colocated_event"), ("findings", "findings_or_non_main_track"), ("short paper", "short_paper"), ("demo", "demo_paper"), ("poster", "poster_or_extended_abstract"), ("extended abstract", "extended_abstract"), ("companion", "companion_proceedings")]
     return sorted({w for pat, w in checks if pat in text})
 
+
+def is_acl_anthology_findings(accepted: Optional[dict[str, Any]]) -> bool:
+    accepted = accepted or {}
+    if clean_cell(accepted.get("status")) != "acl_anthology_confirmed":
+        return False
+    hit = accepted.get("acl_anthology") or {}
+    text = norm(" ".join(clean_cell(x) for x in [
+        accepted.get("venue_name"),
+        accepted.get("acronym"),
+        hit.get("venue_id"),
+        hit.get("venue_acronym"),
+        hit.get("venue_name"),
+        hit.get("volume_title"),
+        hit.get("anthology_id"),
+    ]))
+    return "findings" in text
+
+
+def acl_anthology_findings_parent_acronym(accepted: Optional[dict[str, Any]]) -> str:
+    if not is_acl_anthology_findings(accepted):
+        return ""
+    accepted = accepted or {}
+    hit = accepted.get("acl_anthology") or {}
+    raw_text = " ".join(clean_cell(x) for x in [
+        accepted.get("venue_name"),
+        accepted.get("acronym"),
+        hit.get("venue_id"),
+        hit.get("venue_acronym"),
+        hit.get("venue_name"),
+        hit.get("volume_title"),
+        hit.get("anthology_id"),
+        hit.get("source_xml"),
+    ])
+    upper = raw_text.upper()
+    lowered = norm(raw_text)
+    ordered_patterns = [
+        ("EMNLP", [r"\bEMNLP\b", "empirical methods in natural language processing"]),
+        ("NAACL", [r"\bNAACL\b", "north american chapter"]),
+        ("EACL", [r"\bEACL\b", "european chapter"]),
+        ("AACL", [r"\bAACL\b", "asia-pacific chapter", "asia pacific chapter"]),
+        ("COLING", [r"\bCOLING\b", "international conference on computational linguistics"]),
+        ("CoNLL", [r"\bCONLL\b", "computational natural language learning"]),
+        ("ACL", [r"\bACL\b", "annual meeting of the association for computational linguistics", "association for computational linguistics"]),
+    ]
+    for acronym, patterns in ordered_patterns:
+        for pattern in patterns:
+            if pattern.startswith(r"\b"):
+                if re.search(pattern, upper):
+                    return acronym
+            elif pattern in lowered:
+                return acronym
+    return ""
+
+
 def clean_cell(x: Any) -> str:
     if x is None: return ""
     s = str(x).strip()
@@ -1104,6 +1158,9 @@ def classify(card):
     acceptance_unconfirmed = accepted_status not in _CONFIRMED_ACCEPTANCE_STATUSES
     if acceptance_unconfirmed:
         warnings.append("accepted_publication_not_independently_confirmed")
+    if is_acl_anthology_findings(accepted):
+        warnings = [w for w in warnings if w != "findings_or_non_main_track"]
+        flags.append("acl_anthology_findings_confirmed")
     top = False
     if v:
         non_main = v.get("is_main_track_full_paper") is False or any(w in warnings for w in _NON_MAIN_TRACK_WARNINGS)
@@ -1146,6 +1203,12 @@ def build_card(doi=None, title=None, year=None, arxiv_url=None, include_raw=Fals
     accepted_name = accepted.get("venue_name")
     accepted_kind = norm(accepted.get("venue_type"))
     accepted_acro = accepted.get("acronym")
+    ranking_name = accepted_name
+    ranking_acro = accepted_acro
+    acl_findings_parent_acro = acl_anthology_findings_parent_acronym(accepted)
+    if acl_findings_parent_acro:
+        ranking_name = None
+        ranking_acro = acl_findings_parent_acro
     if accepted.get("status") == "not_implemented_missing_accepted_venue":
         warnings.append("accepted_publication_detection_not_implemented")
     if accepted.get("status") == "dblp_not_found_or_ambiguous":
@@ -1168,13 +1231,17 @@ def build_card(doi=None, title=None, year=None, arxiv_url=None, include_raw=Fals
         if accepted_kind == "preprint":
             warnings.append("accepted_publication_is_preprint_not_ranked_as_venue")
         elif accepted_kind in {"conference", "venue", "proceedings", "symposium"} or (accepted_kind == "auto" and any(k in pubtext for k in ["proceedings","conference","workshop","symposium"])):
-            venue, ws = match_conference_ranking(accepted_name, accepted_acro); warnings += ws
+            venue, ws = match_conference_ranking(ranking_name, ranking_acro); warnings += ws
+            if venue and acl_findings_parent_acro:
+                venue["notes"] = "; ".join(x for x in [venue.get("notes"), f"acl_anthology_findings_parent={acl_findings_parent_acro}"] if x)
         elif accepted_kind in {"journal", "source"}:
-            journal, ws = match_journal_ranking(accepted_name, accepted_acro); warnings += ws
+            journal, ws = match_journal_ranking(ranking_name, ranking_acro); warnings += ws
         else:
             # Auto mode: try journal and conference snapshots; prefer known ranks, otherwise keep the better match.
-            j, jw = match_journal_ranking(accepted_name, accepted_acro)
-            v, vw = match_conference_ranking(accepted_name, accepted_acro)
+            j, jw = match_journal_ranking(ranking_name, ranking_acro)
+            v, vw = match_conference_ranking(ranking_name, ranking_acro)
+            if v and acl_findings_parent_acro:
+                v["notes"] = "; ".join(x for x in [v.get("notes"), f"acl_anthology_findings_parent={acl_findings_parent_acro}"] if x)
             j_known = bool(j) and (rank_known(j.get("ccf_rank")) or rank_known(j.get("cas_quartile")) or rank_known(j.get("jcr_quartile")))
             v_known = bool(v) and (rank_known(v.get("ccf_rank")) or rank_known(v.get("core_rank")))
             if v_known and not j_known:

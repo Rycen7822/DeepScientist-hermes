@@ -7,6 +7,6 @@ CVPR,IEEE/CVF Conference on Computer Vision and Pattern Recognition,conference,A
 ICCV,IEEE/CVF International Conference on Computer Vision,conference,A,unknown,true,CCF-2026-sample,Workshops must be flagged separately.
 AAAI,AAAI Conference on Artificial Intelligence,conference,A,unknown,true,CCF-2026-sample,Sample only.
 IJCAI,International Joint Conference on Artificial Intelligence,conference,A,unknown,true,CCF-2026-sample,Sample only.
-Findings of ACL,Findings of the Association for Computational Linguistics,conference,unranked,unknown,false,local-policy,Not ACL main-track full paper.
+Findings of ACL,Findings of the Association for Computational Linguistics,conference,A,unknown,true,local-policy,ACL Anthology Findings inherits the confirmed parent ACL-family venue rank; workshops remain non-main-track.
 NeurIPS Workshop,Conference on Neural Information Processing Systems Workshop,workshop,unranked,unknown,false,local-policy,Co-located workshop.
 CVPR Workshop,IEEE/CVF Conference on Computer Vision and Pattern Recognition Workshop,workshop,unranked,unknown,false,local-policy,Co-located workshop.

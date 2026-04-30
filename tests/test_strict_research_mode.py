@@ -209,3 +209,74 @@ def test_reliability_verifier_requires_confirmed_acceptance_for_top_venue_tier()
 
         assert tier != "strong_evidence"
         assert "accepted_publication_not_independently_confirmed" in updated_warnings
+
+
+def test_acl_anthology_findings_can_be_strong_evidence():
+    verifier_path = PLUGIN_ROOT / "resources" / "skills" / "paper-reliability-verifier" / "scripts" / "verifier.py"
+    spec = importlib.util.spec_from_file_location("paper_reliability_verifier", verifier_path)
+    verifier = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(verifier)
+
+    card = {
+        "paper": {"year": 2024},
+        "citations": {"openalex": None, "semantic_scholar": None, "crossref": None},
+        "venue": {
+            "ccf_rank": "A",
+            "core_rank": "A*",
+            "is_main_track_full_paper": None,
+        },
+        "journal": None,
+        "accepted_publication": {
+            "status": "acl_anthology_confirmed",
+            "acl_anthology": {
+                "venue_id": "findings",
+                "venue_acronym": "Findings",
+                "volume_title": "Findings of the Association for Computational Linguistics: ACL 2024",
+            },
+        },
+        "publication_status": {"is_retracted": False},
+        "warnings": ["findings_or_non_main_track"],
+    }
+
+    tier, flags, updated_warnings = verifier.classify(card)
+
+    assert tier == "strong_evidence"
+    assert "top_venue" in flags
+    assert "acl_anthology_findings_confirmed" in flags
+    assert "findings_or_non_main_track" not in updated_warnings
+    assert "not_main_track_full_paper" not in updated_warnings
+
+
+def test_build_card_maps_acl_anthology_findings_to_parent_venue_rank(monkeypatch):
+    verifier_path = PLUGIN_ROOT / "resources" / "skills" / "paper-reliability-verifier" / "scripts" / "verifier.py"
+    spec = importlib.util.spec_from_file_location("paper_reliability_verifier", verifier_path)
+    verifier = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(verifier)
+
+    monkeypatch.setattr(verifier, "openalex_title_search", lambda **kwargs: {"results": []})
+    monkeypatch.setattr(verifier, "choose_openalex_work", lambda result, title=None, year=None: None)
+    monkeypatch.setattr(verifier, "acl_anthology_detect_accepted_publication", lambda **kwargs: {
+        "status": "acl_anthology_confirmed",
+        "venue_name": "Findings of the Association for Computational Linguistics: ACL 2024",
+        "venue_type": "conference",
+        "acronym": "Findings",
+        "evidence_source": "ACL Anthology local metadata: title_match",
+        "interface_version": "accepted-publication-v1",
+        "acl_anthology": {
+            "venue_id": "findings",
+            "venue_acronym": "Findings",
+            "venue_name": "Findings of the Association for Computational Linguistics",
+            "volume_title": "Findings of the Association for Computational Linguistics: ACL 2024",
+        },
+    })
+
+    card = verifier.build_card(title="Mock ACL Findings Paper", year=2024, use_openreview=False, use_dblp=False, use_crossref=False)
+
+    assert card["accepted_publication"]["status"] == "acl_anthology_confirmed"
+    assert card["tier"] == "strong_evidence"
+    assert card["venue"]["normalized_name"] == "Annual Meeting of the Association for Computational Linguistics"
+    assert "acl_anthology_findings_confirmed" in card["quality_flags"]
+    assert "findings_or_non_main_track" not in card["warnings"]
+    assert "not_main_track_full_paper" not in card["warnings"]

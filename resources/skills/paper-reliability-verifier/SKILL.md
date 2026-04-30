@@ -15,7 +15,7 @@ Use this skill before a literature-review agent cites a paper as evidence for a 
 
 1. Do not scrape Google Scholar. Treat Google Scholar citation counts as manual-only evidence.
 2. Do not equate OpenAlex / Semantic Scholar / Crossref citation counts with Google Scholar counts.
-3. Do not treat workshop, Findings, short, demo, poster, companion, or extended-abstract papers as main-track full papers.
+3. Do not treat workshop, short, demo, poster, companion, or extended-abstract papers as main-track full papers. ACL Anthology Findings is a confirmed ACL-family publication track and may be `strong_evidence` when its parent venue rank is top-tier.
 4. Do not reduce paper reliability to a single number. Produce an evidence card with warnings.
 5. If the paper is retracted, mark it `do_not_use`.
 
@@ -220,7 +220,7 @@ Rules:
 1. If the user provides `--accepted-venue`, trust that explicit confirmed venue and skip automatic routes as the deciding signal.
 2. Accept ACL Anthology hits only by exact DOI or high normalized title similarity; year must match when known.
 3. Map ACL/EMNLP/NAACL/EACL/AACL/COLING/CoNLL style venues to `conference`; map TACL/CL to `journal`.
-4. Preserve `volume_title` warnings for Findings, workshops, short/demo papers, tutorials, shared tasks, and other non-main-track records.
+4. Preserve `volume_title` distinctions: ACL Anthology Findings should inherit the parent ACL-family venue for ranking, while workshops, short/demo papers, tutorials, shared tasks, and other non-main-track records must keep warnings.
 5. If ACL Anthology results are absent, ambiguous, or low-similarity, do not fabricate a venue; continue to DBLP or unconfirmed open metadata fallback.
 
 ### DBLP accepted-venue detection
@@ -269,7 +269,7 @@ This preserves compatibility with later routes such as Crossref event metadata, 
 For CS/ML/AI:
 1. Normalize venue names using DBLP and local alias tables.
 2. Lookup CCF and CORE ranks from a local snapshot.
-3. Confirm publication form: main-track full/regular paper versus workshop/short/demo/Findings/poster.
+3. Confirm publication form: main-track full/regular paper, ACL Anthology Findings, versus workshop/short/demo/poster.
 4. If track is unknown, add `track_unknown` and set `needs_human_review`.
 
 ### Journal level
@@ -289,9 +289,9 @@ Return a JSON object matching `schemas/paper_evidence_card.schema.json`.
 
 Decision tiers:
 - `do_not_use`: retracted, severe metadata mismatch, known fraud/paper-mill signal.
-- `strong_evidence`: main-track top venue or high-quality journal, not retracted, metadata cross-checked.
+- `strong_evidence`: top venue or high-quality journal, not retracted, accepted publication independently confirmed; ACL Anthology Findings may qualify by inheriting its parent ACL-family venue rank.
 - `supporting_evidence`: credible but not core evidence, or moderate citations.
-- `weak_or_contextual_evidence`: preprint-only, workshop-only, short/demo/Findings, older low-citation paper.
+- `weak_or_contextual_evidence`: preprint-only, workshop-only, short/demo, older low-citation paper.
 - `needs_human_review`: DOI/title mismatch, missing venue track, conflicting ranks, suspicious citation discrepancy.
 
 ## Synthesis policy

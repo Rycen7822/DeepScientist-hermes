@@ -98,7 +98,8 @@ Use volume venue metadata:
 - venue IDs `acl`, `emnlp`, `naacl`, `eacl`, `aacl`, `coling`, `conll`, etc. -> `conference`;
 - `tacl` and `cl` -> `journal`;
 - workshop/shared-task volumes are still `conference`-like proceedings for indexing, but must carry non-main-track warnings from the volume title;
-- `Findings`, `short`, `demo`, `student research workshop`, `system demonstrations`, `tutorial abstracts`, `workshop`, `shared task`, `poster`, and `extended abstract` are not main-track full-paper evidence.
+- ACL Anthology `Findings` volumes are accepted ACL-family publication records; map them to their parent ACL/EMNLP/NAACL/EACL/AACL/COLING/CoNLL venue for ranking;
+- `short`, `demo`, `student research workshop`, `system demonstrations`, `tutorial abstracts`, `workshop`, `shared task`, `poster`, and `extended abstract` are not main-track full-paper evidence.
 
 For ranking lookup, pass:
 
@@ -142,7 +143,7 @@ The parent verifier then decides whether to call `match_conference_ranking` or `
 
 - The package may emit `SchemaMismatchWarning` if its bundled schema differs from the latest downloaded data; this is not automatically fatal for lookup.
 - Avoid building global venue/event/person indices unless needed; they can require parsing all XML files.
-- ACL Anthology includes workshops and Findings. Being indexed is strong evidence of publication, but not necessarily main-track full-paper status.
+- ACL Anthology includes workshops and Findings. Findings is strong evidence of publication and can be strong venue evidence after parent-venue rank lookup; workshops still need non-main-track caveats.
 - Use the volume title and Anthology ID to preserve track information.
 - Do not scrape the website for metadata when the package/local XML data already provides it.
 
@@ -152,5 +153,5 @@ The parent verifier then decides whether to call `match_conference_ranking` or `
 - [ ] Selected hit has DOI match or high title similarity.
 - [ ] Year was checked when known.
 - [ ] `venue_name`, `acronym`, and `venue_type` were mapped into `accepted_publication`.
-- [ ] Findings/workshop/short/demo/non-main-track signals from `volume_title` were preserved as warnings.
+- [ ] ACL Anthology Findings signals from `volume_title` were mapped to the parent venue for ranking; workshop/short/demo/non-main-track signals were preserved as warnings.
 - [ ] The accepted venue was passed to local ranking CSV lookup; ranking was not inferred from ACL Anthology alone.

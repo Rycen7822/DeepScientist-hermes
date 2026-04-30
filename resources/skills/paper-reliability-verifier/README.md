@@ -74,7 +74,7 @@ ACL Anthology 命中后会填充输出中的：
 }
 ```
 
-随后继续用本地 `paper_ranking/conference_ranking.csv` 或 `journal_ranking.csv` 做 CCF/CORE/中科院分区/JCR 查表。ACL Anthology 的 `volume_title` 会保留 Findings、workshop、short/demo 等非主会长文提示；若 DBLP 只命中 `CoRR`，则标记为 preprint，不当作会议/期刊录用。若 ACL Anthology/DBLP 低相似或歧义，则保留 warning，不虚构 venue。Crossref fallback 只把 `journal-article` 和 `proceedings-article` 等 publisher DOI 元数据作为 `crossref_confirmed`，`posted-content` / arXiv / bioRxiv / medRxiv 仍标为 preprint，不做正式 venue ranking。
+随后继续用本地 `paper_ranking/conference_ranking.csv` 或 `journal_ranking.csv` 做 CCF/CORE/中科院分区/JCR 查表。ACL Anthology 的 `volume_title` 会保留 Findings、workshop、short/demo 等 track 信息；ACL Anthology Findings 按其父 ACL-family venue 做 ranking，可在父 venue 为 top-tier 时进入 `strong_evidence`，但 workshop、short/demo、shared-task 等仍保留非主轨警告。若 DBLP 只命中 `CoRR`，则标记为 preprint，不当作会议/期刊录用。若 ACL Anthology/DBLP 低相似或歧义，则保留 warning，不虚构 venue。Crossref fallback 只把 `journal-article` 和 `proceedings-article` 等 publisher DOI 元数据作为 `crossref_confirmed`，`posted-content` / arXiv / bioRxiv / medRxiv 仍标为 preprint，不做正式 venue ranking。
 
 Crossref fallback 会保留 `accepted_publication.crossref`，包括 DOI、title、type、container/event、ISSN/ISBN、publisher、`is-referenced-by-count`、`update-to` 和 `relation`。如需测试 OpenReview/ACL/DBLP 之外的 Crossref DOI 路由，可禁用前置路由：
 
