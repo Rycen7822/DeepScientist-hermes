@@ -400,7 +400,7 @@ class QuestService:
         if not isinstance(payload, dict):
             payload = {}
         normalized = dict(payload)
-        normalized.setdefault("active_anchor", "baseline")
+        normalized.setdefault("active_anchor", "preparing")
         normalized.setdefault("baseline_gate", "pending")
         normalized.setdefault("confirmed_baseline_ref", None)
         normalized.setdefault("requested_baseline_ref", None)

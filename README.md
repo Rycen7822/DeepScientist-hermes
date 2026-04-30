@@ -12,7 +12,7 @@ DeepScientist is the upstream research operating system by ResearAI. This projec
 - A Hermes-native integration of the core DeepScientist research workflow.
 - A self-contained plugin source tree with vendored headless runtime code under `vendor/deepscientist`.
 - A curated Hermes toolset exposing high-level `ds_*` tools instead of raw MCP dispatch.
-- A set of DeepScientist stage skills packaged as plugin resources.
+- A set of DeepScientist stage skills packaged as plugin resources, including strict literature research mode (`strict-research`) and a bundled `paper-reliability-verifier`.
 - A project-local runtime layout that follows upstream `ds --here` semantics: runtime data lives in `<project>/DeepScientist/`.
 
 ## What this project is not

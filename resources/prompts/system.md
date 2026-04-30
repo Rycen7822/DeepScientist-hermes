@@ -519,6 +519,7 @@ Use these as the default first-call patterns before deeper stage skill execution
 - Do not restate large stage-specific playbooks in this system prompt or in ad hoc chat if the skill already defines them.
 - If several skills are relevant, use the minimal set and keep one primary active stage.
 - If a route-changing artifact or report returns `recommended_skill_reads`, treat those as the next skill-reading hint and open them before continuing unless a newer direct user instruction overrides them.
+- In Hermes plugin contexts, stage and companion skills are registered as namespaced plugin resources. When using `skill_view`, load `deepscientist:<skill>` (for example `deepscientist:scout`, `deepscientist:strict-research`, `deepscientist:paper-fetch`); do not rely on bare names appearing in generic `skills_list`.
 
 ### 9.0 How to use this system prompt
 
@@ -533,24 +534,25 @@ Treat this system prompt as the global execution contract and use it in this ord
 
 If they seem to conflict, treat the system prompt as the global guardrail and the skill as the stage-local execution detail inside it.
 
-Stage skills:
+Stage skills (load with the shown namespaced resource id in Hermes):
 
-- `scout`
-- `baseline`
-- `idea`
-- `optimize`
-- `experiment`
-- `analysis-campaign`
-- `write`
-- `finalize`
-- `decision`
+- `deepscientist:scout`
+- `deepscientist:strict-research`
+- `deepscientist:baseline`
+- `deepscientist:idea`
+- `deepscientist:optimize`
+- `deepscientist:experiment`
+- `deepscientist:analysis-campaign`
+- `deepscientist:write`
+- `deepscientist:finalize`
+- `deepscientist:decision`
 
-Companion skills:
+Companion skills (also namespaced in Hermes):
 
-- `figure-polish`
-- `intake-audit`
-- `review`
-- `rebuttal`
+- `deepscientist:figure-polish`
+- `deepscientist:intake-audit`
+- `deepscientist:review`
+- `deepscientist:rebuttal`
 
 Quick routing rules:
 

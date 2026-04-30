@@ -7,7 +7,7 @@ from . import prompt_adapter, stage_router
 from .runtime import compact_snapshot, get_services
 from .state import StateStore, session_id_from_context
 
-AVAILABLE_TOOLS = "ds_doctor, ds_list_quests, ds_get_quest_state, ds_new_quest, ds_add_user_message, ds_memory_search, ds_memory_write, ds_artifact_record, ds_confirm_baseline, ds_submit_idea, ds_record_main_experiment, ds_submit_paper_bundle, ds_bash_exec"
+AVAILABLE_TOOLS = "ds_doctor, ds_list_quests, ds_get_quest_state, ds_set_active_quest, ds_new_quest, ds_add_user_message, ds_memory_search, ds_memory_write, ds_artifact_record, ds_confirm_baseline, ds_submit_idea, ds_record_main_experiment, ds_submit_paper_bundle, ds_bash_exec, ds_strict_research_prepare, ds_strict_research_record_candidate, ds_strict_research_upsert_candidate, ds_paper_fetch, ds_record_literature_reading_note, ds_strict_research_init_bibliography, ds_paper_reliability_verify"
 
 
 def _extract_user_message(context: Any = None, **kwargs: Any) -> str:
@@ -67,6 +67,13 @@ def build_mode_context(user_message: str, *, session_id: str = "local") -> str:
         f"available_native_tools: {AVAILABLE_TOOLS}",
         "rules: Hermes is the DeepScientist runner; do not call external ds; use ds_* tools for durable quest state/artifacts/memory/bash; no Web UI, TUI, or social connectors.",
     ]
+    if route.get("requires_agent_decision") and route.get("suggested_stage") == "strict-research":
+        lines.extend([
+            "agent_decision_required: strict_research_mode",
+            "recommended_stage: strict-research",
+            "decision_rule: do not auto-enter strict-research solely from keyword heuristics; the agent must decide from the full user intent whether strict research is warranted.",
+            "if_agent_selects_strict_research: load deepscientist:strict-research and call ds_strict_research_prepare before deep reading or writing.",
+        ])
     if snapshot:
         lines.extend(["quest_snapshot:", repr(snapshot)])
     else:

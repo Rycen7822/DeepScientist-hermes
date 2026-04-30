@@ -20,6 +20,7 @@ Hard rules:
 - Do not use social/browser/messaging connector surfaces from DeepScientist.
 - Use native tools only; the former background-service layer is not part of this plugin.
 - Keep only active stage context in the working prompt; do not load all DeepScientist stage skills at once.
+- Plugin skills are namespaced resources. Always load them with `deepscientist:<skill>` (for example `deepscientist:scout`, `deepscientist:strict-research`, `deepscientist:paper-fetch`); bare names such as `scout` or `paper-fetch` may not appear in ordinary `skills_list` and should not be used with `skill_view`.
 - Keep DeepScientist project memory separate from Hermes long-term memory. Use Hermes `memory` only for user preferences or cross-project stable facts.
 
 ## 项目本地存储
@@ -127,9 +128,10 @@ Use DeepScientist tools when the result should be part of the durable research r
 - `ds_submit_paper_outline`, `ds_submit_paper_bundle`: record writing outputs. Use `candidate -> select` for outline selection; `selected` is only a compatibility alias for `select`. Markdown-only bundles are supported; the Hermes wrapper counts `##` sections and aligns returned guidance with the latest quest anchor.
 - `ds_bash_exec`: run/list/read/wait/stop quest-local execution that should be logged by DeepScientist. Set `allow_project_root=true` only when project-root workdir is required; set `summary_mode=true` for compact provenance output; complex Python should be written to a `.py` file before execution instead of large inline heredoc.
 - `ds_workflow_smoke_report`: produce a non-mutating Hermes-only checklist for dataset inspection, baseline, experiment, analysis, paper bundle, and final report handoff.
+- Strict research tools: when the user asks for careful/strict literature investigation or a survey, the router may recommend strict research but must not force it. The Hermes agent decides from the full user intent whether to enable strict research; if yes, use `ds_strict_research_prepare`, `ds_strict_research_record_candidate`, `ds_paper_reliability_verify`, and `ds_strict_research_init_bibliography` to enforce broad candidate scouting, reliability verification, conservative filtering, quest-local PDF/reference storage, and bibliography updates before writing.
 - `ds_pause_quest`, `ds_resume_quest`, `ds_stop_quest`: update quest lifecycle.
 
-Load `paper-fetch` when a DeepScientist quest needs arXiv/OpenReview PDF retrieval or official paper-resource verification. Do not load note-taking `clip` for this case unless the user explicitly asks to archive the paper into `llm-wiki`.
+Load `deepscientist:paper-fetch` when a DeepScientist quest needs arXiv/OpenReview/PDF retrieval or official paper-resource verification. Do not load note-taking `clip` for this case unless the user explicitly asks to archive the paper into `llm-wiki`.
 
 Use Hermes native tools when work is local and does not itself need to become quest state:
 
@@ -145,6 +147,8 @@ If Hermes native tools produce important research evidence, immediately record t
 Available stage skills:
 
 - `deepscientist:scout`
+- `deepscientist:strict-research`
+- `deepscientist:paper-reliability-verifier`
 - `deepscientist:baseline`
 - `deepscientist:idea`
 - `deepscientist:optimize`

@@ -41,6 +41,21 @@ QUEST_DIRECTORIES = (
 )
 
 
+def _initial_active_anchor(startup_contract: dict | None = None) -> str:
+    contract = startup_contract if isinstance(startup_contract, dict) else {}
+    explicit = str(contract.get("active_anchor") or contract.get("initial_anchor") or "").strip()
+    if explicit:
+        return explicit
+    final_goal = str(contract.get("final_goal") or "").strip().lower()
+    delivery_mode = str(contract.get("delivery_mode") or "").strip().lower()
+    intent_text = " ".join([final_goal, delivery_mode])
+    if final_goal == "literature_scout" or "strict" in intent_text or "literature" in intent_text:
+        return "strict-research" if "strict" in intent_text else "scout"
+    if final_goal == "baseline_reproduction" or "baseline" in intent_text:
+        return "baseline"
+    return "preparing"
+
+
 def initial_quest_yaml(
     quest_id: str,
     goal: str,
@@ -58,12 +73,13 @@ def initial_quest_yaml(
         else ""
     )
     initial_status_value = "idle" if workspace_mode == "copilot" else "active"
+    active_anchor = _initial_active_anchor(startup_contract)
     return {
         "quest_id": quest_id,
         "title": title or goal,
         "quest_root": str(quest_root.resolve()),
         "status": initial_status_value,
-        "active_anchor": "baseline",
+        "active_anchor": active_anchor,
         "baseline_gate": "pending",
         "confirmed_baseline_ref": None,
         "requested_baseline_ref": requested_baseline_ref,
@@ -128,6 +144,7 @@ def gitignore() -> str:
             ".ds/*.sock",
             ".ds/*.tmp",
             ".ds/worktrees/",
+            "reference/pdfs/*.pdf",
             "tmp/",
             "__pycache__/",
             ".pytest_cache/",

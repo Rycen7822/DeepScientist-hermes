@@ -8,6 +8,7 @@ from ..memory.frontmatter import load_markdown_document
 
 _DEFAULT_STAGE_SKILLS = (
     "scout",
+    "strict-research",
     "baseline",
     "idea",
     "optimize",
@@ -74,29 +75,40 @@ def _skill_order(skill_id: str, metadata: dict[str, Any]) -> tuple[int, str]:
     return _SKILL_ROLE_FALLBACK_ORDER.get(skill_id, 10_000), skill_id
 
 
+def _candidate_skill_roots(repo_root: Path) -> tuple[Path, ...]:
+    return (
+        repo_root / "src" / "skills",
+        repo_root / "skills",
+        repo_root.parent / "skills",
+        repo_root.parent.parent / "resources" / "skills",
+    )
+
+
 def discover_skill_bundles(repo_root: Path) -> list[SkillBundle]:
     bundles: list[SkillBundle] = []
-    skills_root = repo_root / "src" / "skills"
-    if not skills_root.exists():
-        return bundles
-    for skill_md in sorted(skills_root.glob("*/SKILL.md")):
-        skill_id = skill_md.parent.name
-        if skill_id.startswith("."):
+    seen: set[str] = set()
+    for skills_root in _candidate_skill_roots(repo_root):
+        if not skills_root.exists():
             continue
-        metadata = _parse_frontmatter(skill_md)
-        bundles.append(
-            SkillBundle(
-                skill_id=skill_id,
-                name=metadata.get("name", skill_id),
-                description=metadata.get("description", ""),
-                root=skill_md.parent,
-                skill_md=skill_md,
-                role=_normalize_skill_role(skill_id, metadata),
-                metadata=metadata,
-                openai_yaml=(skill_md.parent / "agents" / "openai.yaml") if (skill_md.parent / "agents" / "openai.yaml").exists() else None,
-                claude_md=(skill_md.parent / "agents" / "claude.md") if (skill_md.parent / "agents" / "claude.md").exists() else None,
+        for skill_md in sorted(skills_root.glob("*/SKILL.md")):
+            skill_id = skill_md.parent.name
+            if skill_id.startswith(".") or skill_id in seen:
+                continue
+            metadata = _parse_frontmatter(skill_md)
+            bundles.append(
+                SkillBundle(
+                    skill_id=skill_id,
+                    name=metadata.get("name", skill_id),
+                    description=metadata.get("description", ""),
+                    root=skill_md.parent,
+                    skill_md=skill_md,
+                    role=_normalize_skill_role(skill_id, metadata),
+                    metadata=metadata,
+                    openai_yaml=(skill_md.parent / "agents" / "openai.yaml") if (skill_md.parent / "agents" / "openai.yaml").exists() else None,
+                    claude_md=(skill_md.parent / "agents" / "claude.md") if (skill_md.parent / "agents" / "claude.md").exists() else None,
+                )
             )
-        )
+            seen.add(skill_id)
     bundles.sort(key=lambda bundle: _skill_order(bundle.skill_id, bundle.metadata))
     return bundles
 

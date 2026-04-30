@@ -61,6 +61,13 @@ _TOOL_BINDINGS = [
     (schemas.DS_SUBMIT_PAPER_BUNDLE, tools.ds_submit_paper_bundle),
     (schemas.DS_BASH_EXEC, tools.ds_bash_exec),
     (schemas.DS_WORKFLOW_SMOKE_REPORT, tools.ds_workflow_smoke_report),
+    (schemas.DS_STRICT_RESEARCH_PREPARE, tools.ds_strict_research_prepare),
+    (schemas.DS_STRICT_RESEARCH_RECORD_CANDIDATE, tools.ds_strict_research_record_candidate),
+    (schemas.DS_STRICT_RESEARCH_UPSERT_CANDIDATE, tools.ds_strict_research_upsert_candidate),
+    (schemas.DS_PAPER_FETCH, tools.ds_paper_fetch),
+    (schemas.DS_RECORD_LITERATURE_READING_NOTE, tools.ds_record_literature_reading_note),
+    (schemas.DS_STRICT_RESEARCH_INIT_BIBLIOGRAPHY, tools.ds_strict_research_init_bibliography),
+    (schemas.DS_PAPER_RELIABILITY_VERIFY, tools.ds_paper_reliability_verify),
     (schemas.DS_PAUSE_QUEST, tools.ds_pause_quest),
     (schemas.DS_RESUME_QUEST, tools.ds_resume_quest),
     (schemas.DS_STOP_QUEST, tools.ds_stop_quest),
@@ -82,7 +89,7 @@ _TOOL_BINDINGS = [
     (schemas.DEEPSCIENTIST_RESUME, tools.deepscientist_resume),
 ]
 
-_STAGE_SKILLS = ("scout", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision", "figure-polish", "paper-fetch", "intake-audit", "review", "rebuttal")
+_STAGE_SKILLS = ("scout", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision", "figure-polish", "paper-fetch", "paper-reliability-verifier", "strict-research", "intake-audit", "review", "rebuttal")
 
 
 def register(ctx) -> None:

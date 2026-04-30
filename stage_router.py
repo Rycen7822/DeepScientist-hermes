@@ -4,10 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-STAGE_SKILLS = ("scout", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision")
+STAGE_SKILLS = ("scout", "strict-research", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision")
 COMPANION_SKILLS = ("figure-polish", "intake-audit", "review", "rebuttal")
 
 _KEYWORDS = {
+    "strict-research": ["仔细调研", "认真调研", "谨慎确认", "严格调研", "严格筛选", "撰写综述", "系统综述", "literature review", "systematic review", "careful survey", "carefully research"],
     "scout": ["论文", "文献", "调研", "survey", "paper", "arxiv", "related work", "查找"],
     "baseline": ["baseline", "基线", "复现", "reproduce", "复现实验", "确认基线"],
     "idea": ["创新", "idea", "方法", "提出", "hypothesis", "new method", "路线"],
@@ -32,6 +33,8 @@ class Route:
     companion: str | None = None
     confidence: float = 0.5
     reason: str = "heuristic"
+    suggested_stage: str | None = None
+    requires_agent_decision: bool = False
 
 
 def _score(text: str, words: list[str]) -> int:
@@ -43,9 +46,14 @@ def route(user_message: str, *, active_stage: str | None = None, snapshot: dict[
     state_stage = str((snapshot or {}).get("active_anchor") or active_stage or "").strip()
     if text in _AMBIGUOUS and state_stage in STAGE_SKILLS:
         return Route(state_stage, confidence=0.7, reason="active_stage_continuation")
+    strict_score = _score(text, _KEYWORDS.get("strict-research", []))
+    if strict_score and state_stage == "strict-research":
+        return Route("strict-research", confidence=0.8, reason="active_stage_strict_research_continuation")
     best_stage = state_stage if state_stage in STAGE_SKILLS else "scout"
     best_score = 0
     for stage, words in _KEYWORDS.items():
+        if stage == "strict-research":
+            continue
         score = _score(text, words)
         if score > best_score:
             best_score = score
@@ -57,12 +65,23 @@ def route(user_message: str, *, active_stage: str | None = None, snapshot: dict[
         if score > companion_score:
             companion_score = score
             companion = skill
+    if state_stage == "strict-research" and best_stage == "scout":
+        return Route("strict-research", companion=companion, confidence=0.75, reason="active_stage_strict_research_scope_continuation")
     if best_score == 0 and state_stage in STAGE_SKILLS:
         best_stage = state_stage
     confidence = 0.85 if best_score else 0.55
+    if strict_score and state_stage != "strict-research":
+        return Route(
+            best_stage,
+            companion=companion,
+            confidence=0.8,
+            reason="agent_decision_recommended",
+            suggested_stage="strict-research",
+            requires_agent_decision=True,
+        )
     return Route(best_stage, companion=companion, confidence=confidence, reason="keyword_match" if best_score else "default_or_active")
 
 
 def route_payload(user_message: str, *, active_stage: str | None = None, snapshot: dict[str, Any] | None = None) -> dict[str, Any]:
     r = route(user_message, active_stage=active_stage, snapshot=snapshot)
-    return {"stage": r.stage, "companion": r.companion, "confidence": r.confidence, "reason": r.reason}
+    return {"stage": r.stage, "companion": r.companion, "confidence": r.confidence, "reason": r.reason, "suggested_stage": r.suggested_stage, "requires_agent_decision": r.requires_agent_decision}

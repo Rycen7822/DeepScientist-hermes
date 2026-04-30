@@ -12,7 +12,7 @@ DeepScientist 是 ResearAI 的科研操作系统。本项目保留 DeepScientist
 - 一个 Hermes-native 的 DeepScientist 核心科研流程集成。
 - 一个自包含插件源码树，保留的 headless runtime 位于 `vendor/deepscientist`。
 - 一组高层 `ds_*` Hermes 工具，不向用户暴露 raw MCP 调度。
-- 一组随插件打包的 DeepScientist 阶段技能。
+- 一组随插件打包的 DeepScientist 阶段技能，包括严格文献调研 `strict-research` 和内置 `paper-reliability-verifier`。
 - 一套项目本地 runtime 布局，默认遵循上游 `ds --here` 语义：运行数据位于 `<project>/DeepScientist/`。
 
 ## 这个项目不是什么

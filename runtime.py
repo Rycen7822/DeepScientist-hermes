@@ -60,8 +60,8 @@ def ensure_runtime_import_environment(config: NativeConfig | None = None) -> Non
     vendor_root = VENDOR_ROOT.resolve()
     _clear_conflicting_deepscientist_modules(vendor_root)
     vendor = str(vendor_root)
-    if vendor not in sys.path:
-        sys.path.insert(0, vendor)
+    sys.path = [p for p in sys.path if p != vendor]
+    sys.path.insert(0, vendor)
     # Child monitor processes launched by BashExecService import deepscientist by module name.
     existing_pythonpath = os.environ.get("PYTHONPATH", "")
     parts = [p for p in existing_pythonpath.split(os.pathsep) if p]

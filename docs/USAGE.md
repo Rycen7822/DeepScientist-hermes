@@ -254,6 +254,13 @@ Slash command 主要面向用户交互和快速检查。复杂工作仍应优先
 | `ds_submit_paper_bundle` | 提交论文 bundle manifest；Markdown-only 草稿会统计 `##` sections，并将返回 guidance 对齐到最新 quest anchor |
 | `ds_artifact_record` | 记录通用 artifact |
 | `ds_workflow_smoke_report` | 生成非执行型全流程 smoke checklist，覆盖 dataset/baseline/experiment/analysis/paper_bundle/report |
+| `ds_strict_research_prepare` | 严格调研模式入口：在 quest 内创建 `reference/`、`candidate_references.md`、`reliability_cards/`，并返回保守筛选规则 |
+| `ds_strict_research_record_candidate` | 广泛查阅阶段把候选论文追加到 `reference/candidate_references.md`；此时不急着深读 |
+| `ds_strict_research_upsert_candidate` | 按 title/DOI/link 对 `candidate_references.md` 去重更新状态、evidence card 和保留/剔除理由 |
+| `ds_paper_reliability_verify` | 调用插件内置 `paper_reliability_verifier`，把每篇候选论文的 evidence card 写入 `reference/reliability_cards/`，并返回摘要字段 `paper`/`tier`/`quality_flags`/`warnings` |
+| `ds_paper_fetch` | 从 arXiv/OpenReview/PMLR/直接 PDF 下载官方 PDF 到 `reference/pdfs/`，记录 canonical URL、sha256、页数和 ledger |
+| `ds_record_literature_reading_note` | 逐篇精读后记录 read_status/sections_read/claim_routes，并可同步追加 bibliography 三件套 |
+| `ds_strict_research_init_bibliography` | 筛选后创建 `reference/bibliography/` 三个逐篇阅读维护文件 |
 
 ### 6.4 Quest-local execution
 
@@ -282,6 +289,7 @@ DeepScientist 原生插件注册了阶段技能。每次只加载与当前阶段
 | Stage | 技能 | 目标 | 典型工具 |
 | --- | --- | --- | --- |
 | `scout` | `deepscientist:scout` | 文献/方向侦察，形成候选 baseline 与 eval contract | `ds_memory_write`, `ds_artifact_record` |
+| `strict-research` | `deepscientist:strict-research` + `deepscientist:paper-reliability-verifier` | 用户要求仔细/认真/谨慎调研或综述时，先广泛候选、可靠性验证、保守筛选、下载 PDF，再逐篇阅读维护 bibliography | `ds_strict_research_prepare`, `ds_strict_research_record_candidate`, `ds_paper_reliability_verify`, `ds_strict_research_init_bibliography` |
 | `baseline` | `deepscientist:baseline` | 确认比较对象、环境、指标与可复现实验 | `ds_confirm_baseline`, `ds_attach_baseline`, `ds_waive_baseline` |
 | `idea` | `deepscientist:idea` | 生成、筛选、固化研究 idea | `ds_submit_idea`, `ds_memory_search` |
 | `optimize` | `deepscientist:optimize` | 优化方法、超参、实现路线 | `ds_artifact_record`, `ds_bash_exec` |
@@ -305,7 +313,21 @@ DeepScientist 原生插件注册了阶段技能。每次只加载与当前阶段
 
 ## 8. 典型工作流
 
-### 8.1 新研究项目
+### 8.1 严格文献调研 / 综述
+
+当用户表达“仔细调研论文、认真调研、谨慎确认、严格筛选、撰写综述、literature review/survey”等意图时，路由层只给出 `strict-research` 建议，不自动强制进入该模式；由 Hermes agent 根据完整上下文、任务风险、交付物要求和用户时间预算自主决定是否启用。若 agent 决定启用：
+
+1. 保持当前 quest；没有 quest 时用 `ds_new_quest(goal=..., final_goal="literature_scout" 或 "analysis_report")` 创建。
+2. 加载 `deepscientist:strict-research`。
+3. 调用 `ds_strict_research_prepare(quest_id=..., intent=..., target_count=...)`。
+4. 广泛搜索候选论文，先用 `ds_strict_research_record_candidate` 写入 `reference/candidate_references.md`，不要立即深读。
+5. 候选池足够后逐篇调用 `ds_paper_reliability_verify`，并按 strict-research 规则筛选：预印本看年份/引用/顶尖机构/用户指定；会议看 accepted + CCF/CORE；期刊看 accepted + CCF/中科院/JCR。
+6. 保留数量不足则继续搜索候选；足够后用 `deepscientist:paper-fetch`/常规下载把 PDF 放入 `reference/`，文件名用论文标题。
+7. 调用 `ds_strict_research_init_bibliography` 创建 `reference/bibliography/essential_reference_details.md`、`reference_list.md`、`priority_reference_materials.md`。
+8. 逐篇精读；每读完一篇必须更新这三个 bibliography 文件，然后再读下一篇。
+9. 所有参考论文读完并更新后，再根据用户要求回答、写报告或写论文。
+
+### 8.3 新研究项目
 
 1. `ds_doctor`
 2. `ds_new_quest(goal=...)`

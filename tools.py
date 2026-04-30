@@ -6,15 +6,20 @@ or require the global npm `ds` command.
 """
 from __future__ import annotations
 
+import hashlib
+import importlib.util
 import json
 import os
 import re
 import shutil
+import sys
 import uuid
 from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlparse
+from urllib.request import Request, urlopen
 
 from .redaction import dumps_json
 from .runtime import compact_snapshot, doctor as native_doctor, get_services
@@ -594,9 +599,33 @@ def ds_set_active_quest(args: dict[str, Any]) -> dict[str, Any]:
     if err := _require(args, "quest_id"):
         return {"ok": False, "error": err}
     services = get_services()
-    snapshot = services.quest.snapshot(str(args["quest_id"]))
-    state = StateStore().set_active_quest(str(args["quest_id"]), _session_id(args), active_stage=str(args.get("stage") or snapshot.get("active_anchor") or "") or None)
-    return {"state": state, "quest": compact_snapshot(snapshot)}
+    quest_id = str(args["quest_id"])
+    snapshot = services.quest.snapshot(quest_id)
+    requested_stage = str(args.get("stage") or "").strip()
+    stage = requested_stage or str(snapshot.get("active_anchor") or "").strip() or "preparing"
+    relation = "session_only"
+    if requested_stage:
+        try:
+            snapshot = services.quest.update_settings(quest_id, active_anchor=requested_stage)
+            relation = "synced"
+        except Exception as exc:
+            relation = "not_synced"
+            snapshot = services.quest.snapshot(quest_id)
+            anchor_warning = f"active_stage was set for this Hermes session, but quest active_anchor was not updated: {exc}"
+        else:
+            anchor_warning = "stage was treated as the current quest anchor and synchronized to quest.active_anchor."
+    else:
+        anchor_warning = "No stage supplied; active_stage follows the quest active_anchor."
+    state = StateStore().set_active_quest(quest_id, _session_id(args), active_stage=stage)
+    return {
+        "state": state,
+        "quest": compact_snapshot(snapshot),
+        "active_stage": stage,
+        "active_anchor": str((snapshot or {}).get("active_anchor") or ""),
+        "stage_anchor_relation": relation,
+        "anchor_semantics": "active_stage is the Hermes session routing label; active_anchor is the durable quest-stage anchor. When stage is supplied, the wrapper treats it as the desired current anchor and synchronizes both.",
+        "warning": anchor_warning if relation != "synced" or requested_stage else None,
+    }
 
 
 @_guard
@@ -953,16 +982,30 @@ def ds_artifact_record(args: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "error": err}
     services = get_services()
     root = _quest_root(services, str(args["quest_id"]))
-    payload = args.get("payload") if isinstance(args.get("payload"), dict) else {}
-    if not payload:
+    payload = dict(args.get("payload") or {}) if isinstance(args.get("payload"), dict) else {}
+    top_kind = str(args.get("kind") or "").strip()
+    if payload:
+        if top_kind and not str(payload.get("kind") or "").strip():
+            payload["kind"] = top_kind
+        if args.get("status") is not None and not str(payload.get("status") or "").strip():
+            payload["status"] = str(args.get("status") or "")
+        if args.get("summary") is not None and not str(payload.get("summary") or "").strip():
+            payload["summary"] = str(args.get("summary") or "")
+    else:
         payload = {
-            "kind": str(args.get("kind") or "report"),
+            "kind": top_kind or "report",
             "status": str(args.get("status") or "completed"),
             "summary": str(args.get("summary") or "Hermes-native artifact record."),
             "source": {"kind": "hermes", "role": "native-plugin"},
         }
     record = services.artifact.record(root, payload, checkpoint=args.get("checkpoint") if isinstance(args.get("checkpoint"), bool) else None)
-    return {"artifact": record, "quest_id": str(args["quest_id"])}
+    artifact_ok = bool(record.get("ok")) if isinstance(record, dict) and "ok" in record else True
+    response: dict[str, Any] = {"artifact": record, "artifact_ok": artifact_ok, "quest_id": str(args["quest_id"]), "payload_kind": payload.get("kind")}
+    if not artifact_ok:
+        errors = record.get("errors") if isinstance(record, dict) else None
+        message = "; ".join(str(item) for item in errors) if isinstance(errors, list) else str(errors or "artifact record failed")
+        response.update({"ok": False, "error": message})
+    return response
 
 
 @_guard
@@ -1326,6 +1369,520 @@ def ds_workflow_smoke_report(args: dict[str, Any]) -> dict[str, Any]:
         "ready": ready,
         "summary": "Hermes-only DeepScientist smoke checklist covers dataset inspection, baseline, experiment, analysis, paper_bundle, and final report summary.",
     }
+
+
+STRICT_RESEARCH_RULES = [
+    "预印本论文：保留一年前发表且被引用数量大于10的；近一年发表不看引用量但必须有顶尖研究机构证据；用户指定的一律保留并标注。",
+    "会议论文：保留已录用且满足 CCF-A、CCF-B、CORE-A、CORE-A* 任一条件的论文。",
+    "会议论文被拒：非 desk reject 且有预印本时改按预印本规则；desk reject 不保留，除非用户指定。",
+    "期刊论文：保留已录用且满足 CCF A、CCF B、中科院1区、中科院2区、JCR Q1、JCR Q2 任一条件的论文。",
+    "筛选后数量不足时必须继续广泛调研，不得提前深读或写作。",
+]
+
+
+def _plugin_root() -> Path:
+    return Path(__file__).resolve().parent
+
+
+def _strict_reference_dir(services: Any, quest_id: str) -> Path:
+    root = _quest_root(services, quest_id)
+    reference_dir = root / "reference"
+    reference_dir.mkdir(parents=True, exist_ok=True)
+    return reference_dir
+
+
+def _default_target_count(args: dict[str, Any]) -> int:
+    raw = args.get("target_count")
+    if raw not in (None, ""):
+        try:
+            return max(1, int(raw))
+        except Exception:
+            pass
+    complexity = str(args.get("complexity") or "").strip().lower()
+    return {"small": 8, "medium": 15, "large": 25, "survey": 40}.get(complexity, 15)
+
+
+def _candidate_template(quest_id: str, target_count: int, intent: str) -> str:
+    return f"""# candidate_references
+
+Quest: `{quest_id}`
+Strict research intent: {intent or 'strict literature research'}
+Target retained references: {target_count}
+
+Broadly collect candidates here before deep reading. Run `ds_paper_reliability_verify` for each candidate once the pool is large enough, using the bundled `paper_reliability_verifier`, then mark status.
+
+| Status | Title | DOI | Link | Year | Authors/Institutions | Source | Reliability card | Retain/reject reason | Notes |
+|---|---|---|---|---|---|---|---|---|---|
+"""
+
+
+def _ensure_candidate_file(reference_dir: Path, quest_id: str, target_count: int = 15, intent: str = "") -> Path:
+    path = reference_dir / "candidate_references.md"
+    if not path.exists():
+        path.write_text(_candidate_template(quest_id, target_count, intent), encoding="utf-8")
+    return path
+
+
+def _split_markdown_row(line: str) -> list[str]:
+    text = line.strip()
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|"):
+        text = text[:-1]
+    parts = re.split(r"(?<!\\)\|", text)
+    return [part.strip().replace("\\|", "|") for part in parts]
+
+
+def _escape_md_cell(value: Any) -> str:
+    return str(value or "").strip().replace("|", "\\|").replace("\n", "<br>")
+
+
+def _candidate_row(values: dict[str, Any]) -> str:
+    ordered = [
+        "status",
+        "title",
+        "doi",
+        "link",
+        "year",
+        "authors",
+        "source",
+        "evidence_card",
+        "retain_reject_reason",
+        "note",
+    ]
+    return "| " + " | ".join(_escape_md_cell(values.get(key)) for key in ordered) + " |\n"
+
+
+def _candidate_record_from_row(line: str) -> dict[str, str] | None:
+    cells = _split_markdown_row(line)
+    if len(cells) < 10:
+        return None
+    keys = ["status", "title", "doi", "link", "year", "authors", "source", "evidence_card", "retain_reject_reason", "note"]
+    return {key: cells[idx] if idx < len(cells) else "" for idx, key in enumerate(keys)}
+
+
+def _candidate_key_text(record: dict[str, Any], key_field: str | None = None) -> list[str]:
+    fields = [key_field] if key_field else ["doi", "link", "title"]
+    values = []
+    for field in fields:
+        if not field:
+            continue
+        value = str(record.get(field) or "").strip()
+        if value:
+            values.append(norm_key(value))
+    return values
+
+
+def norm_key(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "").strip().lower())
+
+
+def _download_url_to_bytes(url: str) -> bytes:
+    req = Request(url, headers={"User-Agent": "DeepScientist-Hermes/0.2 paper-fetch"})
+    with urlopen(req, timeout=60) as response:
+        return response.read()
+
+
+def _extract_arxiv_id(raw: Any) -> str:
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    match = re.search(r"(?:arxiv\.org/(?:abs|pdf)/|arXiv:)([0-9]{4}\.[0-9]{4,5}(?:v\d+)?|[a-z\-]+/[0-9]{7}(?:v\d+)?)", text, re.I)
+    if match:
+        return match.group(1).removesuffix(".pdf")
+    if re.fullmatch(r"[0-9]{4}\.[0-9]{4,5}(?:v\d+)?|[a-z\-]+/[0-9]{7}(?:v\d+)?", text, re.I):
+        return text.removesuffix(".pdf")
+    return ""
+
+
+def _openreview_id(raw: Any) -> str:
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    match = re.search(r"openreview\.net/(?:forum|pdf)\?id=([^&#]+)", text)
+    if match:
+        return match.group(1)
+    return text if "/" not in text and " " not in text and "." not in text else ""
+
+
+def _resolve_pdf_url(args: dict[str, Any]) -> tuple[str, str]:
+    explicit = str(args.get("pdf_url") or args.get("url") or "").strip()
+    if explicit and (explicit.lower().endswith(".pdf") or "/pdf" in urlparse(explicit).path.lower()):
+        return explicit, "direct_pdf"
+    arxiv_id = _extract_arxiv_id(args.get("arxiv_id") or args.get("arxiv_url") or explicit)
+    if arxiv_id:
+        return f"https://arxiv.org/pdf/{arxiv_id}.pdf", "arxiv"
+    openreview_id = _openreview_id(args.get("openreview_id") or explicit)
+    if openreview_id:
+        return f"https://openreview.net/pdf?id={openreview_id}", "openreview"
+    pmlr = str(args.get("pmlr_url") or explicit or "").strip()
+    if "proceedings.mlr.press" in pmlr:
+        if pmlr.lower().endswith(".pdf"):
+            return pmlr, "pmlr"
+        try:
+            html = _download_url_to_bytes(pmlr).decode("utf-8", errors="replace")
+            match = re.search(r"href=[\"']([^\"']+\.pdf)[\"']", html, re.I)
+            if match:
+                href = match.group(1)
+                if href.startswith("http"):
+                    return href, "pmlr"
+                parsed = urlparse(pmlr)
+                base = f"{parsed.scheme}://{parsed.netloc}"
+                return base + (href if href.startswith("/") else "/" + href), "pmlr"
+        except Exception:
+            pass
+    if explicit:
+        return explicit, "url_unclassified"
+    return "", "missing_url"
+
+
+def _pdf_page_count(data: bytes) -> int | None:
+    if not data:
+        return None
+    try:
+        return len(set(re.findall(rb"/Type\s*/Page\b", data))) or None
+    except Exception:
+        return None
+
+
+@_guard
+def ds_strict_research_prepare(args: dict[str, Any]) -> dict[str, Any]:
+    services = get_services()
+    quest_id = _active_or_latest_quest_id(args, services)
+    if not quest_id:
+        return {"ok": False, "error": "quest_id is required when no active quest exists"}
+    target_count = _default_target_count(args)
+    intent = str(args.get("intent") or "").strip()
+    reference_dir = _strict_reference_dir(services, quest_id)
+    candidate_path = _ensure_candidate_file(reference_dir, quest_id, target_count, intent)
+    cards_dir = reference_dir / "reliability_cards"
+    cards_dir.mkdir(parents=True, exist_ok=True)
+    workflow = [
+        "广泛查阅相关论文并用 ds_strict_research_upsert_candidate 维护 candidate_references.md；此阶段不急着深读。",
+        "候选数量足够后，对候选分小 batch 调用 ds_paper_reliability_verify；每篇返回 paper/tier/quality_flags/warnings 和 reliability_card_path。",
+        "每完成一个小 batch，立刻用 ds_strict_research_upsert_candidate 更新 candidate_references.md 中对应论文的 status、Reliability card、Retain/reject reason，再进入下一 batch。",
+        "完成所有候选 verify 和标记后，清理 candidate_references.md：删除不能参考的 rejected/do-not-use 论文，保留 retained/needs-human-review 及用户指定论文。",
+        "按 strict-research 筛选规则保留/剔除；数量不足则继续调研。",
+        "保留列表足够后用 ds_paper_fetch 将 PDF 下载到 reference/pdfs/，记录 canonical_url、sha256、page_count 和 ledger。",
+        "调用 ds_strict_research_init_bibliography 创建 bibliography 三文件。",
+        "逐篇精读；每读完一篇调用 ds_record_literature_reading_note 记录 read_status、sections_read、claim_routes，并立刻更新 bibliography 三文件，再进入下一篇。",
+        "全部完成后再回答、写报告、写论文或执行用户要求的下一步。",
+    ]
+    return {
+        "mode": "strict_research",
+        "quest_id": quest_id,
+        "reference_dir": str(reference_dir),
+        "candidate_references_path": str(candidate_path),
+        "reliability_cards_dir": str(cards_dir),
+        "target_count": target_count,
+        "selection_rules": STRICT_RESEARCH_RULES,
+        "workflow": workflow,
+        "verifier_skill": "deepscientist:paper-reliability-verifier",
+        "verifier_resource_path": str(_plugin_root() / "resources" / "skills" / "paper-reliability-verifier"),
+    }
+
+
+@_guard
+def ds_strict_research_record_candidate(args: dict[str, Any]) -> dict[str, Any]:
+    if err := _require(args, "title"):
+        return {"ok": False, "error": err}
+    services = get_services()
+    quest_id = _active_or_latest_quest_id(args, services)
+    if not quest_id:
+        return {"ok": False, "error": "quest_id is required when no active quest exists"}
+    reference_dir = _strict_reference_dir(services, quest_id)
+    candidate_path = _ensure_candidate_file(reference_dir, quest_id)
+    values = {
+        "status": str(args.get("status") or "candidate").strip() or "candidate",
+        "title": str(args.get("title") or "").strip(),
+        "doi": str(args.get("doi") or "").strip(),
+        "link": str(args.get("link") or "").strip(),
+        "year": str(args.get("year") or "").strip(),
+        "authors": str(args.get("authors") or "").strip(),
+        "source": str(args.get("source") or "").strip(),
+        "evidence_card": str(args.get("evidence_card") or "").strip(),
+        "retain_reject_reason": str(args.get("retain_reject_reason") or args.get("reason") or "").strip(),
+        "note": str(args.get("note") or "").strip(),
+    }
+    with candidate_path.open("a", encoding="utf-8") as f:
+        f.write(_candidate_row(values))
+    return {"quest_id": quest_id, "reference_dir": str(reference_dir), "candidate_references_path": str(candidate_path), "record": values}
+
+
+@_guard
+def ds_strict_research_upsert_candidate(args: dict[str, Any]) -> dict[str, Any]:
+    services = get_services()
+    quest_id = _active_or_latest_quest_id(args, services)
+    if not quest_id:
+        return {"ok": False, "error": "quest_id is required when no active quest exists"}
+    key_text = str(args.get("key") or "").strip()
+    if not key_text and not any(str(args.get(field) or "").strip() for field in ("title", "doi", "link")):
+        return {"ok": False, "error": "Provide key or at least one of title, doi, or link."}
+    reference_dir = _strict_reference_dir(services, quest_id)
+    candidate_path = _ensure_candidate_file(reference_dir, quest_id)
+    lines = candidate_path.read_text(encoding="utf-8").splitlines(keepends=True)
+    key_field = str(args.get("key_field") or "").strip() or None
+    incoming = {
+        "status": str(args.get("status") or "candidate").strip() or "candidate",
+        "title": str(args.get("title") or key_text or "").strip(),
+        "doi": str(args.get("doi") or "").strip(),
+        "link": str(args.get("link") or "").strip(),
+        "year": str(args.get("year") or "").strip(),
+        "authors": str(args.get("authors") or "").strip(),
+        "source": str(args.get("source") or "").strip(),
+        "evidence_card": str(args.get("evidence_card") or args.get("reliability_card") or "").strip(),
+        "retain_reject_reason": str(args.get("retain_reject_reason") or args.get("reason") or "").strip(),
+        "note": str(args.get("note") or "").strip(),
+    }
+    target_keys = {norm_key(key_text)} if key_text else set()
+    target_keys.update(_candidate_key_text(incoming, key_field))
+    target_keys.discard("")
+    action = "inserted"
+    updated_record = incoming
+    for idx, line in enumerate(lines):
+        if not line.lstrip().startswith("|") or set(line.strip()) <= {"|", "-", " ", ":"}:
+            continue
+        record = _candidate_record_from_row(line)
+        if not record or norm_key(record.get("title")) == "title":
+            continue
+        record_keys = set(_candidate_key_text(record, key_field))
+        if target_keys and not (target_keys & record_keys):
+            continue
+        merged = dict(record)
+        for field, value in incoming.items():
+            if value:
+                merged[field] = value
+        # Preserve the original title when the caller used only `key` to update status.
+        if not str(args.get("title") or "").strip() and record.get("title"):
+            merged["title"] = record["title"]
+        lines[idx] = _candidate_row(merged)
+        updated_record = merged
+        action = "updated"
+        break
+    if action == "inserted":
+        lines.append(_candidate_row(incoming))
+    candidate_path.write_text("".join(lines), encoding="utf-8")
+    return {"quest_id": quest_id, "reference_dir": str(reference_dir), "candidate_references_path": str(candidate_path), "action": action, "record": updated_record}
+
+
+@_guard
+def ds_paper_fetch(args: dict[str, Any]) -> dict[str, Any]:
+    services = get_services()
+    quest_id = _active_or_latest_quest_id(args, services)
+    if not quest_id:
+        return {"ok": False, "error": "quest_id is required when no active quest exists"}
+    canonical_url, source_kind = _resolve_pdf_url(args)
+    if not canonical_url:
+        return {"ok": False, "error": "Could not resolve a PDF URL from title/url/arxiv_id/openreview_id/pmlr_url/pdf_url.", "official_resource_status": source_kind}
+    reference_dir = _strict_reference_dir(services, quest_id)
+    pdf_dir = reference_dir / "pdfs"
+    pdf_dir.mkdir(parents=True, exist_ok=True)
+    stem_source = args.get("output_name") or args.get("title") or args.get("arxiv_id") or args.get("openreview_id") or canonical_url
+    stem = _safe_slug(stem_source, "paper")[:120]
+    pdf_path = pdf_dir / f"{stem}.pdf"
+    overwrite = _truthy(args.get("overwrite"))
+    if pdf_path.exists() and not overwrite:
+        data = pdf_path.read_bytes()
+        status = "already_exists"
+    else:
+        try:
+            data = _download_url_to_bytes(canonical_url)
+        except Exception as exc:
+            return {"ok": False, "error": f"PDF download failed: {exc}", "canonical_url": canonical_url, "official_resource_status": source_kind}
+        if not data.startswith(b"%PDF") and b"%PDF" not in data[:2048]:
+            return {"ok": False, "error": "Downloaded resource does not look like a PDF.", "canonical_url": canonical_url, "official_resource_status": source_kind, "byte_count": len(data)}
+        pdf_path.write_bytes(data)
+        status = "downloaded"
+    sha = hashlib.sha256(data).hexdigest()
+    page_count = _pdf_page_count(data)
+    ledger_path = reference_dir / "paper_fetch_ledger.jsonl"
+    record = {
+        "paper": str(args.get("title") or "").strip(),
+        "canonical_url": canonical_url,
+        "pdf_path": str(pdf_path),
+        "sha256": sha,
+        "page_count": page_count,
+        "body_text_status": "not_extracted",
+        "official_resource_status": source_kind,
+        "status": status,
+        "fetched_at": _utc_now(),
+    }
+    _append_jsonl_path(ledger_path, record)
+    return {"quest_id": quest_id, "reference_dir": str(reference_dir), "ledger_path": str(ledger_path), **record}
+
+
+@_guard
+def ds_record_literature_reading_note(args: dict[str, Any]) -> dict[str, Any]:
+    services = get_services()
+    quest_id = _active_or_latest_quest_id(args, services)
+    if not quest_id:
+        return {"ok": False, "error": "quest_id is required when no active quest exists"}
+    title = str(args.get("title") or args.get("paper_id") or "").strip()
+    if not title:
+        return {"ok": False, "error": "title or paper_id is required"}
+    reference_dir = _strict_reference_dir(services, quest_id)
+    notes_dir = reference_dir / "reading_notes"
+    notes_dir.mkdir(parents=True, exist_ok=True)
+    bibliography_dir = reference_dir / "bibliography"
+    bibliography_dir.mkdir(parents=True, exist_ok=True)
+    paper_id = _safe_slug(args.get("paper_id") or title, "paper")[:120]
+    surfaces_read = _clean_string_list(args.get("surfaces_read"))
+    sections_read = _clean_string_list(args.get("sections_read"))
+    claim_routes = _clean_string_list(args.get("claim_routes"))
+    status = str(args.get("status") or "read").strip() or "read"
+    record = {
+        "paper_id": paper_id,
+        "title": title,
+        "pdf_path": str(args.get("pdf_path") or "").strip(),
+        "surfaces_read": surfaces_read,
+        "sections_read": sections_read,
+        "claim_routes": claim_routes,
+        "status": status,
+        "note": str(args.get("note") or "").strip(),
+        "recorded_at": _utc_now(),
+    }
+    note_path = notes_dir / f"{paper_id}.md"
+    note_body = [
+        f"# {title}",
+        "",
+        f"- paper_id: `{paper_id}`",
+        f"- status: {status}",
+        f"- pdf_path: {record['pdf_path'] or 'not-recorded'}",
+        f"- surfaces_read: {', '.join(surfaces_read) if surfaces_read else 'not-recorded'}",
+        f"- sections_read: {', '.join(sections_read) if sections_read else 'not-recorded'}",
+        f"- claim_routes: {', '.join(claim_routes) if claim_routes else 'not-recorded'}",
+        "",
+        "## Note",
+        "",
+        record["note"] or "(empty)",
+        "",
+    ]
+    note_path.write_text("\n".join(note_body), encoding="utf-8")
+    ledger_path = reference_dir / "literature_reading_ledger.jsonl"
+    _append_jsonl_path(ledger_path, record)
+    updates = args.get("bibliography_updates") if isinstance(args.get("bibliography_updates"), dict) else {}
+    bib_files = {
+        "essential_reference_details": bibliography_dir / "essential_reference_details.md",
+        "reference_list": bibliography_dir / "reference_list.md",
+        "priority_reference_materials": bibliography_dir / "priority_reference_materials.md",
+    }
+    default_headers = {
+        "essential_reference_details": "# Essential Reference Details\n\n",
+        "reference_list": "# Reference List\n\n",
+        "priority_reference_materials": "# Priority Reference Materials\n\n",
+    }
+    bibliography_written: list[str] = []
+    for key, path in bib_files.items():
+        if not path.exists():
+            path.write_text(default_headers[key], encoding="utf-8")
+        text = str(updates.get(key) or updates.get(path.name) or "").strip()
+        if text:
+            with path.open("a", encoding="utf-8") as handle:
+                handle.write(f"\n## {title}\n\n{text}\n")
+            bibliography_written.append(str(path))
+    status_counts: dict[str, int] = {}
+    if ledger_path.exists():
+        for line in ledger_path.read_text(encoding="utf-8").splitlines():
+            try:
+                item = json.loads(line)
+            except Exception:
+                continue
+            item_status = str(item.get("status") or "unknown")
+            status_counts[item_status] = status_counts.get(item_status, 0) + 1
+    completion = {"total_notes": sum(status_counts.values()), "status_counts": status_counts, "updated_at": _utc_now()}
+    completion_path = reference_dir / "literature_reading_completion.json"
+    _write_json_path(completion_path, completion)
+    return {
+        "quest_id": quest_id,
+        "reference_dir": str(reference_dir),
+        "bibliography_dir": str(bibliography_dir),
+        "note_path": str(note_path),
+        "ledger_path": str(ledger_path),
+        "completion_path": str(completion_path),
+        "completion": completion,
+        "bibliography_written": bibliography_written,
+        "record": record,
+    }
+
+
+@_guard
+def ds_strict_research_init_bibliography(args: dict[str, Any]) -> dict[str, Any]:
+    services = get_services()
+    quest_id = _active_or_latest_quest_id(args, services)
+    if not quest_id:
+        return {"ok": False, "error": "quest_id is required when no active quest exists"}
+    reference_dir = _strict_reference_dir(services, quest_id)
+    bibliography_dir = reference_dir / "bibliography"
+    bibliography_dir.mkdir(parents=True, exist_ok=True)
+    overwrite = _truthy(args.get("overwrite"))
+    files = {
+        "essential_reference_details.md": "# Essential Reference Details\n\n逐篇阅读保留论文后更新。每篇论文记录：标题、文件名、核心观点/发现现象、motivation、方法论、解决的问题、结论；每篇论文不超过300字。\n\n",
+        "reference_list.md": "# Reference List\n\n记录写到什么内容时该引用哪篇论文：定义、背景、motivation、方法比较、实验结论、局限性、未来方向等。\n\n",
+        "priority_reference_materials.md": "# Priority Reference Materials\n\n当需要写某篇论文中的发现、观点或结论时，优先查看哪些论文、章节、段落、图表或附录。逐篇阅读后持续更新。\n\n",
+    }
+    written: list[str] = []
+    for name, content in files.items():
+        path = bibliography_dir / name
+        if overwrite or not path.exists():
+            path.write_text(content, encoding="utf-8")
+        written.append(str(path))
+    return {"quest_id": quest_id, "reference_dir": str(reference_dir), "bibliography_dir": str(bibliography_dir), "files": written}
+
+
+def _load_bundled_verifier(verifier_root: Path) -> Any:
+    script = verifier_root / "scripts" / "verifier.py"
+    if not script.exists():
+        raise FileNotFoundError(f"Bundled verifier script not found: {script}")
+    module_name = f"_deepscientist_bundled_paper_verifier_{abs(hash(script))}"
+    spec = importlib.util.spec_from_file_location(module_name, script)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load bundled verifier from {script}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@_guard
+def ds_paper_reliability_verify(args: dict[str, Any]) -> dict[str, Any]:
+    services = get_services()
+    quest_id = _active_or_latest_quest_id(args, services)
+    if not quest_id:
+        return {"ok": False, "error": "quest_id is required when no active quest exists"}
+    if not str(args.get("doi") or args.get("title") or args.get("arxiv_url") or "").strip():
+        return {"ok": False, "error": "Provide at least one of doi, title, or arxiv_url."}
+    reference_dir = _strict_reference_dir(services, quest_id)
+    cards_dir = reference_dir / "reliability_cards"
+    cards_dir.mkdir(parents=True, exist_ok=True)
+    verifier_root = _plugin_root() / "resources" / "skills" / "paper-reliability-verifier"
+    stem = _safe_slug(args.get("output_name") or args.get("doi") or args.get("title") or args.get("arxiv_url"), "paper")[:120]
+    out = cards_dir / f"{stem}.json"
+    verifier = _load_bundled_verifier(verifier_root)
+    card = verifier.build_card(
+        doi=str(args.get("doi") or "").strip() or None,
+        title=str(args.get("title") or "").strip() or None,
+        year=int(args["year"]) if args.get("year") not in (None, "") else None,
+        arxiv_url=str(args.get("arxiv_url") or "").strip() or None,
+        include_raw=_truthy(args.get("include_raw")),
+        accepted_venue=str(args.get("accepted_venue") or "").strip() or None,
+        accepted_type=str(args.get("accepted_type") or "").strip() or None,
+        accepted_acronym=str(args.get("accepted_acronym") or "").strip() or None,
+    )
+    out.write_text(json.dumps(card, ensure_ascii=False, indent=2), encoding="utf-8")
+    response_mode = str(args.get("response_mode") or "full").strip().lower()
+    summary = {
+        "quest_id": quest_id,
+        "reference_dir": str(reference_dir),
+        "reliability_card_path": str(out),
+        "paper": card.get("paper") if isinstance(card, dict) else {},
+        "tier": card.get("tier") if isinstance(card, dict) else None,
+        "quality_flags": card.get("quality_flags") if isinstance(card, dict) else [],
+        "warnings": card.get("warnings") if isinstance(card, dict) else [],
+        "verifier_resource_path": str(verifier_root),
+    }
+    if response_mode in {"summary", "compact"}:
+        return summary
+    return {**summary, "card": card}
 
 
 @_guard

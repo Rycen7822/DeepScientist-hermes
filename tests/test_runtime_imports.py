@@ -51,6 +51,29 @@ def test_runtime_prefers_vendored_runtime_when_top_level_package_is_preloaded(tm
     assert Path(deepscientist.artifact.__file__).resolve().is_relative_to(runtime.VENDOR_ROOT.resolve())
 
 
+def test_runtime_moves_vendor_before_project_plugin_package_shadow(tmp_path):
+    load_plugin()
+    from hermes_plugins.deepscientist_native import runtime
+
+    plugin_parent = tmp_path / "plugins"
+    shadow_pkg = plugin_parent / "deepscientist"
+    shadow_pkg.mkdir(parents=True)
+    (shadow_pkg / "__init__.py").write_text("", encoding="utf-8")
+    vendor = str(runtime.VENDOR_ROOT.resolve())
+    sys.path = [str(plugin_parent), vendor, *[p for p in sys.path if p not in {str(plugin_parent), vendor}]]
+    for name in list(sys.modules):
+        if name == "deepscientist" or name.startswith("deepscientist."):
+            sys.modules.pop(name, None)
+
+    runtime.ensure_runtime_import_environment()
+    import deepscientist
+    import deepscientist.artifact
+
+    assert sys.path[0] == vendor
+    assert Path(deepscientist.__file__).resolve().is_relative_to(runtime.VENDOR_ROOT.resolve())
+    assert Path(deepscientist.artifact.__file__).resolve().is_relative_to(runtime.VENDOR_ROOT.resolve())
+
+
 def test_daemon_modules_are_not_importable_from_native_plugin():
     load_plugin()
     with pytest.raises(ModuleNotFoundError):

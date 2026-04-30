@@ -31,6 +31,13 @@ provides_tools:
   - ds_submit_paper_bundle
   - ds_bash_exec
   - ds_workflow_smoke_report
+  - ds_strict_research_prepare
+  - ds_strict_research_record_candidate
+  - ds_strict_research_upsert_candidate
+  - ds_paper_fetch
+  - ds_record_literature_reading_note
+  - ds_strict_research_init_bibliography
+  - ds_paper_reliability_verify
   - ds_pause_quest
   - ds_resume_quest
   - ds_stop_quest

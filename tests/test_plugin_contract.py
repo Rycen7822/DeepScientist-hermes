@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from conftest import PLUGIN_ROOT, load_plugin
@@ -11,12 +12,15 @@ EXPECTED_NATIVE_TOOLS = {
     "ds_add_user_message", "ds_record_user_requirement", "ds_read_quest_documents", "ds_memory_search", "ds_memory_read", "ds_memory_write",
     "ds_artifact_record", "ds_confirm_baseline", "ds_waive_baseline", "ds_attach_baseline", "ds_create_local_baseline", "ds_submit_idea",
     "ds_list_research_branches", "ds_record_main_experiment", "ds_create_analysis_campaign", "ds_get_analysis_campaign", "ds_record_analysis_slice",
-    "ds_submit_paper_outline", "ds_submit_paper_bundle", "ds_bash_exec", "ds_workflow_smoke_report", "ds_pause_quest", "ds_resume_quest", "ds_stop_quest",
+    "ds_submit_paper_outline", "ds_submit_paper_bundle", "ds_bash_exec", "ds_workflow_smoke_report",
+    "ds_strict_research_prepare", "ds_strict_research_record_candidate", "ds_strict_research_upsert_candidate", "ds_paper_fetch",
+    "ds_record_literature_reading_note", "ds_strict_research_init_bibliography", "ds_paper_reliability_verify",
+    "ds_pause_quest", "ds_resume_quest", "ds_stop_quest",
 }
 EXPECTED_SKILLS = {
     "deepscientist:scout", "deepscientist:baseline", "deepscientist:idea", "deepscientist:optimize",
     "deepscientist:experiment", "deepscientist:analysis-campaign", "deepscientist:write", "deepscientist:finalize",
-    "deepscientist:decision", "deepscientist:figure-polish", "deepscientist:paper-fetch", "deepscientist:intake-audit", "deepscientist:review", "deepscientist:rebuttal",
+    "deepscientist:decision", "deepscientist:figure-polish", "deepscientist:paper-fetch", "deepscientist:paper-reliability-verifier", "deepscientist:strict-research", "deepscientist:intake-audit", "deepscientist:review", "deepscientist:rebuttal",
 }
 
 class FakeContext:
@@ -58,7 +62,7 @@ def test_manifest_and_registration_contract():
 def test_real_plugin_context_registers_plugin_skills_as_namespaced_resources():
     import sys
 
-    import hermes_cli
+    hermes_cli = pytest.importorskip("hermes_cli")
     from hermes_cli.plugins import PluginContext, PluginManager, PluginManifest
 
     # When pytest is launched from the plugin source root, the local tools.py can
