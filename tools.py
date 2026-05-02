@@ -1536,6 +1536,28 @@ def _resolve_pdf_url(args: dict[str, Any]) -> tuple[str, str]:
     return "", "missing_url"
 
 
+def _download_url_candidates(canonical_url: str, source_kind: str) -> list[str]:
+    """Return download attempts while preserving the canonical URL in ledgers.
+
+    arXiv occasionally serves the extensionless `/pdf/<id>` route when the
+    equivalent `/pdf/<id>.pdf` route is flaky. Keep the canonical URL stable,
+    but retry the extensionless route before reporting the paper unreachable.
+    """
+    urls = [canonical_url]
+    parsed = urlparse(canonical_url)
+    if parsed.netloc.lower().endswith("arxiv.org") and parsed.path.lower().startswith("/pdf/") and parsed.path.lower().endswith(".pdf"):
+        extensionless = canonical_url[:-4]
+        if extensionless not in urls:
+            urls.append(extensionless)
+    elif source_kind == "arxiv":
+        arxiv_id = _extract_arxiv_id(canonical_url)
+        if arxiv_id:
+            extensionless = f"https://arxiv.org/pdf/{arxiv_id}"
+            if extensionless not in urls:
+                urls.append(extensionless)
+    return urls
+
+
 def _pdf_page_count(data: bytes) -> int | None:
     if not data:
         return None
@@ -1684,13 +1706,34 @@ def ds_paper_fetch(args: dict[str, Any]) -> dict[str, Any]:
     if pdf_path.exists() and not overwrite:
         data = pdf_path.read_bytes()
         status = "already_exists"
+        retrieval_url = canonical_url
+        download_attempts = [canonical_url]
     else:
-        try:
-            data = _download_url_to_bytes(canonical_url)
-        except Exception as exc:
-            return {"ok": False, "error": f"PDF download failed: {exc}", "canonical_url": canonical_url, "official_resource_status": source_kind}
-        if not data.startswith(b"%PDF") and b"%PDF" not in data[:2048]:
-            return {"ok": False, "error": "Downloaded resource does not look like a PDF.", "canonical_url": canonical_url, "official_resource_status": source_kind, "byte_count": len(data)}
+        download_errors = []
+        data = b""
+        retrieval_url = ""
+        download_attempts = _download_url_candidates(canonical_url, source_kind)
+        for candidate_url in download_attempts:
+            try:
+                candidate_data = _download_url_to_bytes(candidate_url)
+            except Exception as exc:
+                download_errors.append({"url": candidate_url, "error": str(exc)})
+                continue
+            if not candidate_data.startswith(b"%PDF") and b"%PDF" not in candidate_data[:2048]:
+                download_errors.append({"url": candidate_url, "error": f"resource does not look like a PDF; byte_count={len(candidate_data)}"})
+                continue
+            data = candidate_data
+            retrieval_url = candidate_url
+            break
+        if not data:
+            return {
+                "ok": False,
+                "error": "PDF download failed for all attempted URLs.",
+                "canonical_url": canonical_url,
+                "attempted_urls": download_attempts,
+                "download_errors": download_errors,
+                "official_resource_status": source_kind,
+            }
         pdf_path.write_bytes(data)
         status = "downloaded"
     sha = hashlib.sha256(data).hexdigest()
@@ -1699,6 +1742,8 @@ def ds_paper_fetch(args: dict[str, Any]) -> dict[str, Any]:
     record = {
         "paper": str(args.get("title") or "").strip(),
         "canonical_url": canonical_url,
+        "retrieval_url": retrieval_url,
+        "attempted_urls": download_attempts,
         "pdf_path": str(pdf_path),
         "sha256": sha,
         "page_count": page_count,

@@ -2679,7 +2679,11 @@ class QuestService:
         if not isinstance(next_numeric_id, int) or next_numeric_id < 1:
             next_numeric_id = scanned_next_numeric_id
             should_write = True
-        elif next_numeric_id < scanned_next_numeric_id:
+        elif next_numeric_id != scanned_next_numeric_id:
+            # The quests directory is the source of truth for auto numeric ids.
+            # This deliberately allows the counter to move backwards after a
+            # numeric quest directory is deleted, instead of preserving stale
+            # high-water marks in quest_id_state.json.
             next_numeric_id = scanned_next_numeric_id
             should_write = True
         state = {
@@ -2748,6 +2752,9 @@ class QuestService:
         startup_contract: dict[str, Any] | None = None,
     ) -> dict:
         quest_id, auto_generated = self._normalize_quest_id(quest_id)
+        if not auto_generated:
+            with self._quest_id_state_lock():
+                self._read_quest_id_state_locked()
         quest_root = self._quest_root(quest_id)
         if quest_root.exists():
             raise FileExistsError(f"Quest already exists: {quest_id}")

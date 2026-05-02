@@ -173,6 +173,41 @@ def test_paper_fetch_writes_pdf_hash_and_ledger(monkeypatch):
     assert Path(payload["ledger_path"]).exists()
 
 
+def test_paper_fetch_retries_extensionless_arxiv_pdf_when_dot_pdf_fails(monkeypatch):
+    load_plugin()
+    from hermes_plugins.deepscientist_native import tools
+
+    quest_id = parse_json(tools.ds_new_quest({"goal": "Fetch paper fallback smoke", "quest_id": "issue-paper-fetch-arxiv-fallback-test"}))["quest"]["quest_id"]
+    pdf_bytes = b"%PDF-1.5\n1 0 obj <</Type /Page>>\nendobj\n%%EOF\n"
+    calls = []
+
+    def fake_download(url):
+        calls.append(url)
+        if url.endswith(".pdf"):
+            raise RuntimeError("HTTP Error 500: Internal Server Error")
+        return pdf_bytes
+
+    monkeypatch.setattr(tools, "_download_url_to_bytes", fake_download)
+
+    payload = parse_json(
+        tools.ds_paper_fetch(
+            {
+                "quest_id": quest_id,
+                "title": "Fallback Paper",
+                "arxiv_id": "2410.20672v2",
+                "output_name": "fallback-paper",
+            }
+        )
+    )
+
+    assert payload["ok"] is True
+    assert calls == ["https://arxiv.org/pdf/2410.20672v2.pdf", "https://arxiv.org/pdf/2410.20672v2"]
+    assert payload["canonical_url"] == "https://arxiv.org/pdf/2410.20672v2.pdf"
+    assert payload["retrieval_url"] == "https://arxiv.org/pdf/2410.20672v2"
+    assert payload["attempted_urls"] == calls
+    assert Path(payload["pdf_path"]).read_bytes() == pdf_bytes
+
+
 def test_candidate_upsert_updates_existing_row_without_duplicates():
     load_plugin()
     from hermes_plugins.deepscientist_native import tools

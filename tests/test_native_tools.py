@@ -1,8 +1,56 @@
 from __future__ import annotations
 
+import json
+import shutil
 from pathlib import Path
 
 from conftest import load_plugin, parse_json
+
+
+def test_auto_quest_creation_resyncs_numeric_state_from_actual_directories():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import config, tools
+
+    first = parse_json(tools.ds_new_quest({"goal": "First auto quest"}))
+    assert first["ok"] is True
+    assert first["quest"]["quest_id"] == "001"
+
+    second = parse_json(tools.ds_new_quest({"goal": "Second auto quest"}))
+    assert second["ok"] is True
+    assert second["quest"]["quest_id"] == "002"
+
+    cfg = config.load_config()
+    second_root = Path(second["quest"]["quest_root"])
+    shutil.rmtree(second_root)
+    state_path = cfg.runtime_home / "runtime" / "quest_id_state.json"
+    assert json.loads(state_path.read_text(encoding="utf-8"))["next_numeric_id"] == 3
+
+    recycled = parse_json(tools.ds_new_quest({"goal": "Recycled auto quest after deletion"}))
+
+    assert recycled["ok"] is True
+    assert recycled["quest"]["quest_id"] == "002"
+    assert json.loads(state_path.read_text(encoding="utf-8"))["next_numeric_id"] == 3
+
+
+def test_named_quest_creation_resyncs_numeric_state_before_scaffold():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import config, tools
+
+    first = parse_json(tools.ds_new_quest({"goal": "First auto quest"}))
+    second = parse_json(tools.ds_new_quest({"goal": "Second auto quest"}))
+    assert first["quest"]["quest_id"] == "001"
+    assert second["quest"]["quest_id"] == "002"
+
+    cfg = config.load_config()
+    shutil.rmtree(Path(second["quest"]["quest_root"]))
+    state_path = cfg.runtime_home / "runtime" / "quest_id_state.json"
+    assert json.loads(state_path.read_text(encoding="utf-8"))["next_numeric_id"] == 3
+
+    named = parse_json(tools.ds_new_quest({"goal": "Named quest after deletion", "quest_id": "named-after-delete"}))
+
+    assert named["ok"] is True
+    assert named["quest"]["quest_id"] == "named-after-delete"
+    assert json.loads(state_path.read_text(encoding="utf-8"))["next_numeric_id"] == 2
 
 
 def test_native_quest_memory_artifact_and_bash_smoke():

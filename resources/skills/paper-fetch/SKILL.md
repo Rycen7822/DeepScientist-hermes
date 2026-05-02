@@ -91,7 +91,7 @@ Minimum durable fields:
 4. If the arXiv API returns `503`, malformed XML, empty content, or transient failures, parse the abs page metadata immediately.
 5. Fetch/extract the PDF body for method/results/details that affect the quest.
 6. Use arXiv HTML as a grounded fallback or complement for section structure, tables, captions, and first-party links when available.
-7. If Python HTTPS fetches are flaky, retry with `curl -L --http1.1` before declaring the paper unreachable.
+7. If Python HTTPS fetches are flaky, retry the extensionless arXiv PDF route `https://arxiv.org/pdf/<id>` when `https://arxiv.org/pdf/<id>.pdf` fails, then retry with `curl -L --http1.1` before declaring the paper unreachable.
 
 ### What to preserve
 

@@ -20,6 +20,8 @@ def isolated_native_env(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(fake_home))
     monkeypatch.delenv("DEEPSCIENTIST_HERMES_ROOT", raising=False)
     monkeypatch.delenv("DEEPSCIENTIST_HERMES_CONFIG", raising=False)
+    monkeypatch.delenv("DEEPSCIENTIST_PROJECT_ROOT", raising=False)
+    monkeypatch.delenv("DEEPSCIENTIST_HERMES_PROJECT_ROOT", raising=False)
     monkeypatch.delenv("DEEPSCIENTIST_HOME", raising=False)
     monkeypatch.delenv("DS_HOME", raising=False)
     monkeypatch.setenv("PATH", f"{tmp_path / 'bin'}:/usr/bin:/bin")
