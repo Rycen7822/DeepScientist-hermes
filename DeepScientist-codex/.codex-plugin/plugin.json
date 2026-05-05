@@ -17,7 +17,7 @@
       "Write"
     ],
     "defaultPrompt": [
-      "Use DeepScientist Codex Native for research quest state. Load the deepscientist-codex skill, run scripts/dsctl.py doctor from the project root, and persist important results through dsctl calls."
+      "Use DeepScientist Codex Native for research quest state. Load the deepscientist-codex skill, run scripts/dsctl.py doctor from the project root, persist important results through dsctl calls, and load bundled support skills such as deepscientist-experiment-execution, deepscientist-quest-handoffs, deepscientist-writing-plans, deepscientist-paper-reliability-verification, or deepscientist-review only when the subtask needs them."
     ],
     "brandColor": "#4D6A7A"
   }

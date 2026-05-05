@@ -12,6 +12,7 @@ Use this project with the DeepScientist Codex native adapter.
 - Native control script: ${ROOT}/scripts/dsctl.py
 - No MCP transport is used.
 - Do not call the external npm ds command for normal work.
+- Bundled support skills include deepscientist-experiment-execution, deepscientist-quest-handoffs, deepscientist-writing-plans, deepscientist-paper-reliability-verification, and deepscientist-review.
 
 Smoke check:
 

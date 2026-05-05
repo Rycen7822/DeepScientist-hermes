@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from conftest import PLUGIN_ROOT, load_plugin
+from conftest import PLUGIN_ROOT, load_plugin, parse_json
 
 EXPECTED_NATIVE_TOOLS = {
     "ds_doctor", "ds_list_quests", "ds_get_quest_state", "ds_set_active_quest", "ds_new_quest",
@@ -17,11 +17,18 @@ EXPECTED_NATIVE_TOOLS = {
     "ds_record_literature_reading_note", "ds_strict_research_init_bibliography", "ds_paper_reliability_verify",
     "ds_pause_quest", "ds_resume_quest", "ds_stop_quest",
 }
-EXPECTED_SKILLS = {
+EXPECTED_STAGE_AND_COMPANION_SKILLS = {
     "deepscientist:scout", "deepscientist:baseline", "deepscientist:idea", "deepscientist:optimize",
     "deepscientist:experiment", "deepscientist:analysis-campaign", "deepscientist:write", "deepscientist:finalize",
     "deepscientist:decision", "deepscientist:figure-polish", "deepscientist:paper-fetch", "deepscientist:paper-reliability-verifier", "deepscientist:strict-research", "deepscientist:intake-audit", "deepscientist:review", "deepscientist:rebuttal",
 }
+EXPECTED_DEEP_INTEGRATED_SUPPORT_SKILLS = {
+    "deepscientist:experiment-execution",
+    "deepscientist:quest-handoffs",
+    "deepscientist:writing-plans",
+    "deepscientist:paper-reliability-verification",
+}
+EXPECTED_SKILLS = EXPECTED_STAGE_AND_COMPANION_SKILLS | EXPECTED_DEEP_INTEGRATED_SUPPORT_SKILLS
 
 class FakeContext:
     def __init__(self, plugin_name="deepscientist"):
@@ -94,6 +101,53 @@ def test_real_plugin_context_registers_plugin_skills_as_namespaced_resources():
     assert "deepscientist-mode" in registered
     assert manager.find_plugin_skill("deepscientist:scout") == PLUGIN_ROOT / "resources" / "skills" / "scout" / "SKILL.md"
     assert manager.find_plugin_skill("deepscientist:deepscientist-mode") == PLUGIN_ROOT / "skills" / "deepscientist-mode" / "SKILL.md"
+
+
+def test_deep_integrated_support_skills_are_plugin_owned_resources():
+    plugin = load_plugin()
+    ctx = FakeContext(); plugin.register(ctx)
+
+    expected_details = {
+        "deepscientist:experiment-execution": ["ds_bash_exec", "planned_not_executed", "baseline gate"],
+        "deepscientist:quest-handoffs": ["AGENTS.md", "handoff", "ds_artifact_record"],
+        "deepscientist:writing-plans": ["Implementation Plan", "ds_bash_exec", "DeepScientist"],
+        "deepscientist:paper-reliability-verification": ["ds_paper_reliability_verify", "OpenReview", "accepted_publication"],
+        "deepscientist:review": ["paper/review/review.md", "ds_bash_exec", "claim downgrade"],
+    }
+    for skill_name, required_phrases in expected_details.items():
+        path = ctx.skills[skill_name]
+        assert path.is_relative_to(PLUGIN_ROOT)
+        assert path.exists()
+        text = path.read_text(encoding="utf-8")
+        for phrase in required_phrases:
+            assert phrase in text, f"{skill_name} missing {phrase}"
+    assert not any("/home/xu/.hermes/skills" in str(path) for path in ctx.skills.values())
+
+
+def test_deep_integrated_support_skills_are_runtime_discoverable_companions():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import runtime
+
+    services = runtime.get_services()
+    bundles = {bundle.skill_id: bundle for bundle in services.skill_installer.discover()}
+    for skill_id in {"experiment-execution", "quest-handoffs", "writing-plans", "paper-reliability-verification", "review"}:
+        bundle = bundles[skill_id]
+        assert bundle.role == "companion"
+        assert bundle.root == PLUGIN_ROOT / "resources" / "skills" / skill_id
+        assert bundle.skill_md.exists()
+
+
+def test_read_documents_lists_deep_integrated_support_skill_docs():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import tools
+
+    parse_json(tools.ds_new_quest({"goal": "Support skill docs smoke", "quest_id": "support-skill-docs-test"}))
+    docs = parse_json(tools.ds_read_quest_documents({"quest_id": "support-skill-docs-test", "include_content": False}))
+    ids = {doc["document_id"] for doc in docs["documents"]}
+    for skill_id in {"experiment-execution", "quest-handoffs", "writing-plans", "paper-reliability-verification", "review"}:
+        assert f"skill::{skill_id}/SKILL.md" in ids
+    support_docs = {doc["document_id"]: doc for doc in docs["documents"] if doc["document_id"].startswith("skill::")}
+    assert str(PLUGIN_ROOT / "resources" / "skills" / "review" / "SKILL.md") == support_docs["skill::review/SKILL.md"]["path"]
 
 
 def test_no_raw_mcp_or_external_cli_bridge_registered():

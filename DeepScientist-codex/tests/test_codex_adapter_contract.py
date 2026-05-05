@@ -139,6 +139,32 @@ def test_assets_and_docs_are_codex_native_not_hermes_or_mcp_only():
     assert "scripts/dsctl.py" in combined
 
 
+def test_codex_plugin_packages_deep_integrated_deepscientist_skills():
+    expected_skill_ids = {
+        "experiment-execution": ["ds_bash_exec", "planned_not_executed", "baseline gate"],
+        "quest-handoffs": ["AGENTS.md", "handoff", "ds_artifact_record"],
+        "writing-plans": ["Implementation Plan", "ds_bash_exec", "DeepScientist"],
+        "paper-reliability-verification": ["ds_paper_reliability_verify", "OpenReview", "accepted_publication"],
+        "review": ["paper/review/review.md", "ds_bash_exec", "claim downgrade"],
+    }
+    for skill_id, phrases in expected_skill_ids.items():
+        resource_skill = PLUGIN_ROOT / "deepscientist_native" / "resources" / "skills" / skill_id / "SKILL.md"
+        repo_resource_skill = PLUGIN_ROOT / "deepscientist_native" / "resources" / "repo" / "src" / "skills" / skill_id / "SKILL.md"
+        codex_skill = PLUGIN_ROOT / "skills" / f"deepscientist-{skill_id}" / "SKILL.md"
+        assert resource_skill.exists(), resource_skill
+        assert repo_resource_skill.exists(), repo_resource_skill
+        assert codex_skill.exists(), codex_skill
+        combined = resource_skill.read_text(encoding="utf-8") + "\n" + repo_resource_skill.read_text(encoding="utf-8") + "\n" + codex_skill.read_text(encoding="utf-8")
+        for phrase in phrases:
+            assert phrase in combined, f"deepscientist-{skill_id} missing {phrase}"
+        assert "artifact.record(" not in combined
+        assert "memory.write" not in combined
+        assert "bash_exec(" not in combined
+        assert "Hermes compatibility note" not in combined
+        assert "Hermes `memory(" not in combined
+        assert "Use Hermes tools" not in combined
+
+
 def test_installer_registers_codex_plugin_without_mcp():
     installer = (PLUGIN_ROOT / "scripts" / "install.sh").read_text(encoding="utf-8")
     assert "~/.codex/plugins/deepscientist-codex" in installer

@@ -5,7 +5,7 @@ This directory is a complete native Codex CLI adapter for the Hermes-native Deep
 ## What it provides
 
 - A Codex plugin manifest at `.codex-plugin/plugin.json`.
-- Codex skills under `skills/`, including `deepscientist-codex` and adapted DeepScientist stage skills.
+- Codex skills under `skills/`, including `deepscientist-codex`, adapted DeepScientist stage skills, and support skills such as `deepscientist-experiment-execution`, `deepscientist-quest-handoffs`, `deepscientist-writing-plans`, `deepscientist-paper-reliability-verification`, and `deepscientist-review`.
 - A direct native control script: `scripts/dsctl.py`.
 - A self-contained Python package `deepscientist_native/` with the vendored headless DeepScientist runtime, resources, schemas, and curated handlers.
 - Project-local runtime semantics: when run from a project root, DeepScientist state is stored in `<project>/DeepScientist/`.

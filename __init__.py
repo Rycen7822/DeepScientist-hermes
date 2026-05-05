@@ -89,7 +89,12 @@ _TOOL_BINDINGS = [
     (schemas.DEEPSCIENTIST_RESUME, tools.deepscientist_resume),
 ]
 
-_STAGE_SKILLS = ("scout", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision", "figure-polish", "paper-fetch", "paper-reliability-verifier", "strict-research", "intake-audit", "review", "rebuttal")
+_STAGE_SKILLS = (
+    "scout", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision",
+    "figure-polish", "paper-fetch", "paper-reliability-verifier", "strict-research", "intake-audit", "review", "rebuttal",
+    # Plugin-owned support skills adapted from formerly global Hermes skills.
+    "experiment-execution", "quest-handoffs", "writing-plans", "paper-reliability-verification",
+)
 
 
 def register(ctx) -> None:

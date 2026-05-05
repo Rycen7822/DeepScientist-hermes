@@ -12,7 +12,7 @@ DeepScientist 是 ResearAI 的科研操作系统。本项目保留 DeepScientist
 - 一个 Hermes-native 的 DeepScientist 核心科研流程集成。
 - 一个自包含插件源码树，保留的 headless runtime 位于 `vendor/deepscientist`。
 - 一组高层 `ds_*` Hermes 工具，不向用户暴露 raw MCP 调度。
-- 一组随插件打包的 DeepScientist 阶段技能，包括严格文献调研 `strict-research` 和内置 `paper-reliability-verifier`。
+- 一组随插件打包的 DeepScientist 阶段、companion 和深度集成 support skills，包括严格文献调研 `strict-research`、`review`、`experiment-execution`、`quest-handoffs`、`writing-plans`、`paper-reliability-verification` 以及内置 `paper-reliability-verifier` 工具 skill。
 - 一套项目本地 runtime 布局，默认遵循上游 `ds --here` 语义：运行数据位于 `<project>/DeepScientist/`。
 
 ## 这个项目不是什么
@@ -37,7 +37,7 @@ stage_router.py                     阶段和 companion skill 路由
 prompt_adapter.py                   prompt/tool-name 适配
 schemas.py                          工具 schema 和常量
 skills/deepscientist-mode/          给 Hermes agent 的紧凑操作 skill
-resources/skills/                   DeepScientist 阶段 skills
+resources/skills/                   DeepScientist 阶段、companion 和 support skills
 resources/prompts/                  插件使用的 prompt fragments
 vendor/deepscientist/               保留的 headless DeepScientist runtime
 DeepScientist-codex/                同一 headless runtime 的 Codex CLI 原生适配器

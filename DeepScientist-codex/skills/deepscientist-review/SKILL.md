@@ -1,10 +1,21 @@
 ---
 name: deepscientist-review
-description: Use when a draft, paper, or paper-like report is substantial enough for an independent skeptical audit before finalization, rebuttal, or revision routing.
+description: Run a skeptical evidence-grounded DeepScientist review pass for drafts, paper-like reports, claim scope, and follow-up routing.
+version: 1.0.1
+author: Orchestra Research
+license: MIT
+tags: [Review, Paper Review, Revision, Writing, Research]
+metadata:
+  hermes:
+    tags: [Review, Paper Review, Revision, Writing, Research]
+    category: user-imported
+    related_skills: [research-paper-writing, figure-polish, writing-anti-ai]
+    requires_toolsets: [file, terminal, todo, session_search]
 skill_role: companion
 ---
 
-> Codex adapter note: this stage skill is bundled for the DeepScientist Codex native plugin. Use `scripts/dsctl.py call <ds_tool_name> --json ... --format json` for DeepScientist state instead of unavailable Hermes/MCP tool calls. Do not use MCP transport or the external `ds` command. Runtime state lives under `<project>/DeepScientist/`.
+> Codex adapter note: this support skill is bundled for DeepScientist Codex Native. Use `scripts/dsctl.py call <ds_tool_name> --json ... --format json` for DeepScientist state, load at most one support skill alongside the active stage, and keep `transport="codex-native-cli"` / `mcp=false`. Do not use MCP transport or the external `ds` command. Runtime state lives under `<project>/DeepScientist/`.
+> Core review outputs include `paper/review/review.md`, `paper/review/revision_log.md`, and a concrete claim downgrade / follow-up route when needed.
 
 # Review
 
@@ -17,12 +28,21 @@ It is also not the same as `rebuttal`.
 - `review` audits that narrative like a harsh but constructive expert reviewer.
 - `rebuttal` responds to concrete external reviewer pressure that already exists.
 
+## Codex adapter compatibility note
+
+- Treat `quest` as the current task, manuscript workspace, or review target.
+- Treat `startup_contract.*` as optional user-provided constraints or manuscript-edit preferences; ignore them when absent.
+- Replace legacy shell-wrapper calls with `ds_bash_exec` through `scripts/dsctl.py` for quest-logged shell; ordinary Codex file tools for direct file IO.
+- Replace legacy milestone or artifact-interaction hooks with ordinary user-visible progress updates in the assistant response.
+- Replace legacy memory helper calls with `session_search(...)`, `ds_memory_write`, and durable local review files as appropriate.
+- Route names such as `intake-audit`, `scout`, `analysis-campaign`, `baseline`, `write`, `decision`, `finalize`, and `rebuttal` are workflow labels. If those exact skills are unavailable, use the closest available Codex skills/tools to accomplish the same purpose.
+
 ## Interaction discipline
 
 - Follow the shared interaction contract injected by the system prompt.
 - For ordinary active work, prefer a concise progress update once work has crossed roughly 6 tool calls with a human-meaningful delta, and do not drift beyond roughly 12 tool calls or about 8 minutes without a user-visible update.
-- When the review report, revision plan, or follow-up experiment TODO list becomes durable, send a richer `ds_artifact_record payload={'kind': 'milestone'}, reply_mode='threaded', ...)` update that says what the main risks are, what should be fixed next, and whether the next route is writing, experiment, or claim downgrade.
-- Hard execution rule: if this stage needs terminal work such as document builds, scripted checks, Git inspection, or file inspection, every such command must go through `ds_bash_exec`.
+- When the review report, revision plan, or follow-up experiment TODO list becomes durable, send a richer user-visible progress update that says what the main risks are, what should be fixed next, and whether the next route is writing, experiment, or claim downgrade.
+- Hard execution rule: if this stage needs shell work such as document builds, scripted checks, Git inspection, or file inspection, every such command must go through the active execution surface. In Codex use `ds_bash_exec` through `scripts/dsctl.py` when shell work must become quest evidence; ordinary Codex file tools are fine for direct file IO.
 
 ## Purpose
 
@@ -92,9 +112,9 @@ Use, in roughly this order:
 - prior self-review or reviewer-first notes as low-trust auxiliary input
 - nearby papers when novelty or comparison is unclear
 
-If the draft/result state is still unclear, open `intake-audit` first before continuing the review workflow.
+If the draft/result state is still unclear, perform a quick intake audit first before continuing the review workflow.
 Before proposing extra experiments, read those structured `evaluation_summary` blocks first so you do not request work that the recorded evidence already resolved.
-If the user provided draft files or manuscript bundles directly, first normalize them into durable quest-visible paths before planning experiments or section-level revisions.
+If the user provided draft files or manuscript bundles directly, first normalize them into durable working paths before planning experiments or section-level revisions.
 
 ## Core outputs
 
@@ -106,11 +126,15 @@ The review pass should usually leave behind:
 - `paper/paper_experiment_matrix.md` when more evidence is still needed
 - `paper/paper_experiment_matrix.json` when more evidence is still needed
 
-Use the templates in `references/` when needed:
+Use the templates and references in `references/` when needed:
 
 - `review-report-template.md`
 - `revision-log-template.md`
 - `experiment-todo-template.md`
+- `paper-like-idea-revision.md` for revising a substantial idea/report from external researcher feedback while preserving first-author voice, compact section-level edits, DeepScientist durability, canonical artifact kinds, source fetching/caveats, final mechanical checks, and reviewer-memo pitfalls such as target leakage, baseline category errors, direct-trial controls, and infeasible experiment scale
+- `lossless-document-splitting.md` for auditing a long manuscript/report after it has been split into companion documents and the original has been compressed into an index; use it to verify no source sections, tables, formulas, references, or paragraph blocks were lost
+- `resource-manifest-tiering.md` for revising a paper-like idea's download list or resource manifest after reading active idea/protocol files; use it to mark main-paper required, Phase-0, implementation, appendix, legacy, reasoning, optional, and reference-only resources without creating a drifting second manifest
+- `paper-like-idea-revision.md` also covers repeated DeepScientist split-idea revision hygiene, including `idea/` directory layout: active docs in root, audits in `idea/audits/`, backups in `idea/backup/`, and legacy/source carryover in `idea/archive/`.
 
 ## Review dimensions
 
@@ -271,9 +295,9 @@ Before treating the experiments section as stable, require that every currently 
 When extra evidence is truly needed, use the shared supplementary-experiment protocol:
 
 - recover ids / refs first if needed
-- create one `artifact.create_analysis_campaign(...)`
-- represent even one extra run as a one-slice campaign
-- record each completed slice with `ds_artifact_record_analysis_slice(...)`
+- write the follow-up work into `paper/review/experiment_todo.md` and mirror it into the current Codex task list when active execution is needed
+- represent even one extra run as an explicit named task or analysis slice in local files
+- update the experiment matrix and review artifacts after each completed slice
 
 Do not invent a separate review-only experiment workflow.
 
@@ -316,7 +340,7 @@ When `startup_contract.review_followup_policy = audit_only`:
 
 - stop after the durable audit artifacts and route recommendation
 
-### 8. Manuscript revision delivery contract
+## Manuscript revision delivery contract
 
 If manuscript revision is required, make the delta explicit:
 
@@ -325,6 +349,15 @@ If manuscript revision is required, make the delta explicit:
 - new wording
 - evidence basis
 - remaining limitation
+
+When the user asks to revise a paper-like idea/report from an external researcher or reviewer memo, treat the memo as edit instructions for the manuscript, not as a discussion prompt:
+
+1. Read the current draft and locate the exact sections that correspond to each critique before editing.
+2. Preserve the user's stated voice constraints. If they ask for first-author voice, write as the paper owner; remove advisory phrases such as “should”, “建议”, “可能需要”, and discussion-style hedging unless the manuscript section explicitly needs a limitation.
+3. Prefer compact edits to existing paragraphs, tables, formulas, and experiment plans before adding new sections.
+4. Patch in small section-level chunks, then reread the changed ranges before continuing.
+5. If the memo introduces new papers or baselines, fetch/verify the sources before rewriting claims and record the retrieval surface or caveat.
+6. After editing, run a mechanical final pass for forbidden phrases, obsolete claim terms, reference numbering, display-math compatibility, duplicated claims, and overlong paragraphs.
 
 If `startup_contract.manuscript_edit_mode = copy_ready_text`:
 
@@ -339,7 +372,7 @@ If `startup_contract.manuscript_edit_mode = latex_required`:
 
 ## Companion skill routing
 
-Open additional skills only when the review workflow requires them:
+Open additional skills only when the review workflow requires them. These route names are conceptual; if the exact skill is unavailable in Codex, use the closest available skill or direct tool workflow.
 
 - `intake-audit`
   - when the current draft/result/bundle state is still unclear
@@ -358,27 +391,23 @@ Open additional skills only when the review workflow requires them:
 
 ## Artifact routing guidance
 
-Use these tools deliberately:
+Use Codex tools deliberately:
 
-- `ds_artifact_record payload={'kind': 'decision', ...})`
+- durable review files under the manuscript workspace
   - review conclusion, claim downgrade recommendation, route choice, stop/go recommendation
-- `artifact.create_analysis_campaign(...)`
-  - when the experiment TODO list should become concrete follow-up slices
-- `ds_artifact_record_analysis_slice(...)`
-  - one completed review-driven slice
-- `artifact.submit_paper_outline(mode='revise', ...)`
-  - when the review materially changes the narrative blueprint
-- `artifact.submit_paper_bundle(...)`
-  - only when the revised manuscript package is genuinely ready
-- `ds_artifact_record ...)`
+- `todo`
+  - when the review TODO list should become an explicit follow-up queue
+- ordinary assistant progress updates
   - user-visible progress and review milestones
+- `ds_bash_exec` for quest-logged shell; ordinary file tools for direct file IO, `read_file`, `search_files`, and `patch`
+  - manuscript inspection, edits, verification, and local workflow execution
 
 ## Memory discipline
 
 Stage-start requirement:
 
-- run `ds_memory_search(scope='quest', limit=5)`
-- run at least one `ds_memory_search(...)` for:
+- run `session_search(...)` when prior work on the same paper, method, or review context may matter
+- check current workspace files and, when useful, search prior sessions for:
   - paper title
   - main method name
   - review or self-review
@@ -386,7 +415,7 @@ Stage-start requirement:
 
 Stage-end requirement:
 
-- if the review produced a durable lesson, claim downgrade, revision rule, or experiment-gap judgment, write at least one `ds_memory_write(...)`
+- if the review produced a durable lesson, claim downgrade, revision rule, or experiment-gap judgment that will matter across sessions, write a concise `ds_memory_write` card or durable local note
 
 Useful tags include:
 

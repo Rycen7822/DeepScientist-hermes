@@ -157,7 +157,7 @@ def doctor() -> dict[str, Any]:
     except Exception as exc:
         check("vendored_runtime_import", False, f"Vendored runtime import failed: {exc}")
     repo = resource_repo_root(cfg)
-    expected_skills = {"scout","baseline","idea","optimize","experiment","analysis-campaign","write","finalize","decision","figure-polish","intake-audit","review","rebuttal"}
+    expected_skills = {"scout","baseline","idea","optimize","experiment","analysis-campaign","write","finalize","decision","figure-polish","paper-fetch","paper-reliability-verifier","strict-research","intake-audit","review","rebuttal","experiment-execution","quest-handoffs","writing-plans","paper-reliability-verification"}
     present_skills = {p.parent.name for p in (RESOURCE_ROOT / "skills").glob("*/SKILL.md")}
     check("resource_skills", expected_skills.issubset(present_skills), "DeepScientist stage/companion skills are present.", missing=sorted(expected_skills - present_skills), count=len(present_skills))
     check("resource_prompts", (RESOURCE_ROOT / "prompts").exists() and not (RESOURCE_ROOT / "prompts" / "connectors").exists(), "Prompt resources are present without connector prompts.")

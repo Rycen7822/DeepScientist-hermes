@@ -89,6 +89,18 @@ The original Hermes plugin exposed these business capabilities through MCP. In t
 
 Equivalence is defined at the research workflow layer: durable quest state, memory/artifact writes, generated files, logs, status payloads, and recoverable error payloads. It intentionally does not preserve MCP protocol objects, FastMCP server behavior, `.mcp.json`, or MCP transport naming.
 
+## Bundled DeepScientist support skills
+
+The Codex adapter packages the same DeepScientist-aware support skills as the Hermes plugin. Load them by their Codex skill directory names and use `scripts/dsctl.py` for durable operations:
+
+- `deepscientist-experiment-execution`: experiment-command execution, manifest validation, `planned_not_executed` boundaries, baseline gate/comparator handling, and `ds_bash_exec` patterns.
+- `deepscientist-quest-handoffs`: `AGENTS.md`, current-status handoffs, researcher packages, sync checks, and `ds_artifact_record` milestones.
+- `deepscientist-writing-plans`: implementation plans, experiment roadmaps, code-only passes, and formal command handoffs.
+- `deepscientist-paper-reliability-verification`: `ds_paper_reliability_verify`, OpenReview/ACL/DBLP/Crossref evidence, and accepted-publication reliability decisions.
+- `deepscientist-review`: skeptical draft/report audits, claim downgrade, revision logs, and follow-up experiment routing.
+
+These are native Codex skills, not MCP tools. Every durable DeepScientist operation still goes through `scripts/dsctl.py call ds_* ... --format json`.
+
 ## Safety boundaries
 
 - no MCP transport;

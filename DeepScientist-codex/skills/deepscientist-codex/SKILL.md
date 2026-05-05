@@ -68,6 +68,18 @@ Use ordinary Codex file editing and shell commands for local code changes that d
 
 This plugin also ships adapted stage skills such as `deepscientist-experiment`, `deepscientist-strict-research`, `deepscientist-paper-fetch`, and `deepscientist-write`. Load only the active stage skill plus at most one companion skill.
 
+## Bundled support skills
+
+For DeepScientist-specific subtasks, load the adapted Codex skills instead of generic global skills:
+
+- `deepscientist-experiment-execution`
+- `deepscientist-quest-handoffs`
+- `deepscientist-writing-plans`
+- `deepscientist-paper-reliability-verification`
+- `deepscientist-review`
+
+Use only one companion support skill alongside the active stage skill. Continue to call durable operations through `scripts/dsctl.py call ds_* ... --format json`; do not use MCP or the external `ds` command.
+
 ## Final reply checklist
 
 When completing a DeepScientist task, report:

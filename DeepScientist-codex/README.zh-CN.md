@@ -11,6 +11,10 @@
 - `scripts/dsctl.py list-tools --format json` 当前暴露 62 个 Codex-native 工具，返回 `transport="codex-native-cli"`、`mcp=false`。
 - 已补齐原 DeepScientist Hermes MCP 业务面里的 convenience/introspection 等价工具：`ds_memory_list_recent`、`ds_resolve_runtime_refs`、`ds_get_paper_contract_health`、`ds_get_global_status`、`ds_get_method_scoreboard`、`ds_get_optimization_frontier`、`ds_get_conversation_context`、`ds_list_paper_outlines`、`ds_refresh_summary`、`ds_arxiv`。
 
+## 内置 support skills
+
+Codex 版本会同时打包 DeepScientist 专用 support skills：`deepscientist-experiment-execution`、`deepscientist-quest-handoffs`、`deepscientist-writing-plans`、`deepscientist-paper-reliability-verification` 和 `deepscientist-review`。这些 skill 只负责 Codex 侧运行手册；持久化操作仍通过 `scripts/dsctl.py call ds_* ... --format json` 完成，不使用 MCP。
+
 快速检查：
 
 ```bash

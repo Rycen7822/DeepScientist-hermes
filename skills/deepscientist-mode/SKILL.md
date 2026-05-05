@@ -170,6 +170,18 @@ Rules:
 4. Record completion evidence as memory/artifact.
 5. If switching route or stage, record the reason with `ds_artifact_record` or `ds_memory_write`.
 
+## Deep-integrated companion/support skills
+
+The plugin bundles several formerly user-local skills as `deepscientist:*` resources. Load at most one when the current subtask needs it:
+
+- `deepscientist:experiment-execution` for formal command documents, manifest validation, `planned_not_executed` boundaries, baseline gate/comparator semantics, and real-runner backfill.
+- `deepscientist:quest-handoffs` for `AGENTS.md`, concise current-status handoffs, researcher packages, sync verification, and `ds_artifact_record` milestone routing.
+- `deepscientist:writing-plans` for implementation plans, DeepScientist experiment roadmaps, code-only passes, and formal experiment command handoffs.
+- `deepscientist:paper-reliability-verification` for using `ds_paper_reliability_verify` and accepted-publication evidence before citing papers as reliable support.
+- `deepscientist:review` for skeptical draft/report audits, claim downgrade, revision logs, experiment TODOs, and route decisions.
+
+These are plugin-owned copies. Do not depend on bare global skills with the same original names during DeepScientist work.
+
 ## Slash commands
 
 Use slash commands for quick user interaction:

@@ -19,6 +19,8 @@ The installer:
 
 It does not create `.mcp.json`, does not add a server-transport registry field, and does not call external ds for normal work.
 
+The installed Codex plugin also includes DeepScientist-specific support skills: `deepscientist-experiment-execution`, `deepscientist-quest-handoffs`, `deepscientist-writing-plans`, `deepscientist-paper-reliability-verification`, and `deepscientist-review`. These are native Codex skill resources; durable state still goes through `scripts/dsctl.py call ds_* ... --format json`.
+
 The installer also does not copy or start the original FastMCP server. Original DeepScientist Hermes MCP capabilities are reached through Codex-native wrappers such as `ds_memory_list_recent`, `ds_resolve_runtime_refs`, `ds_get_global_status`, `ds_get_method_scoreboard`, `ds_get_optimization_frontier`, `ds_get_conversation_context`, `ds_get_paper_contract_health`, `ds_list_paper_outlines`, `ds_refresh_summary`, `ds_arxiv`, and `ds_bash_exec`.
 
 ## Project initialization note

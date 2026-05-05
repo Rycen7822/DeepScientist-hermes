@@ -4478,21 +4478,43 @@ class QuestService:
                     "source_scope": "quest_memory",
                 }
             )
-        skills_root = repo_root() / "src" / "skills"
-        for skill_md in sorted(skills_root.glob("*/SKILL.md")):
-            if skill_md.parent.name.startswith("."):
-                continue
-            relative = skill_md.relative_to(skills_root).as_posix()
-            documents.append(
-                {
-                    "document_id": f"skill::{relative}",
-                    "title": relative,
-                    "path": str(skill_md),
-                    "kind": "markdown",
-                    "writable": False,
-                    "source_scope": "skill",
-                }
-            )
+        seen_skill_documents: set[str] = set()
+        if self.skill_installer is not None:
+            for bundle in self.skill_installer.discover():
+                skill_md = bundle.skill_md
+                relative = f"{bundle.skill_id}/SKILL.md"
+                if relative in seen_skill_documents:
+                    continue
+                documents.append(
+                    {
+                        "document_id": f"skill::{relative}",
+                        "title": relative,
+                        "path": str(skill_md),
+                        "kind": "markdown",
+                        "writable": False,
+                        "source_scope": "skill",
+                    }
+                )
+                seen_skill_documents.add(relative)
+        else:
+            skills_root = repo_root() / "src" / "skills"
+            for skill_md in sorted(skills_root.glob("*/SKILL.md")):
+                if skill_md.parent.name.startswith("."):
+                    continue
+                relative = skill_md.relative_to(skills_root).as_posix()
+                if relative in seen_skill_documents:
+                    continue
+                documents.append(
+                    {
+                        "document_id": f"skill::{relative}",
+                        "title": relative,
+                        "path": str(skill_md),
+                        "kind": "markdown",
+                        "writable": False,
+                        "source_scope": "skill",
+                    }
+                )
+                seen_skill_documents.add(relative)
         return documents
 
     def explorer(

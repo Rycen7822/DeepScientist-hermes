@@ -179,6 +179,18 @@ quest 表示研究项目边界，不表示某一次追问或某一种执行模�
 - 完成 baseline 对齐：`ds_confirm_baseline` 或 `ds_waive_baseline`。
 - 完成论文草稿或 bundle：`ds_submit_paper_outline` / `ds_submit_paper_bundle`。
 
+### 4.4 Deep-integrated support skills
+
+The plugin now owns several support skills that used to live only in the user-local Hermes skill library. They are registered as namespaced plugin skills and can be loaded on demand without relying on `/home/xu/.hermes/skills`:
+
+- `deepscientist:experiment-execution`: execution-command documents, early manifests, `planned_not_executed` boundaries, real-runner backfill, baseline gate/comparator handling, and `ds_bash_exec` validation patterns.
+- `deepscientist:quest-handoffs`: quest-root `AGENTS.md`, concise current-status files, researcher handoff packages, single-file zero-start handoffs, sync checks, and `ds_artifact_record` milestone/report routing.
+- `deepscientist:writing-plans`: DeepScientist experiment roadmaps, code-only implementation passes, formal experiment command documents, TDD planning, and durable quest memory/artifact handoff.
+- `deepscientist:paper-reliability-verification`: conservative paper-authority decisions using `ds_paper_reliability_verify`, OpenReview/ACL/DBLP/Crossref evidence, local ranking snapshots, and quest-local reliability cards.
+- `deepscientist:review`: skeptical paper/report review, claim downgrade, revision logs, paper experiment matrices, and follow-up route decisions.
+
+The mode hook injects only the active stage excerpt plus one matched companion excerpt. Do not load all support skills at once; choose the one that matches the current subtask.
+
 ## 5. Slash command 快速入口
 
 Slash command 主要面向用户交互和快速检查。复杂工作仍应优先使用工具调用。

@@ -14,11 +14,11 @@
 
 ## Strengths
 
-- 
+-
 
 ## Weaknesses
 
-- 
+-
 
 ## Key Issues
 
@@ -53,9 +53,9 @@
 
 ## Priority Revision Plan
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Manuscript Revision Package
 
@@ -91,7 +91,7 @@ Root
 
 ## References
 
-- 
+-
 
 ## Optional Internal Score
 

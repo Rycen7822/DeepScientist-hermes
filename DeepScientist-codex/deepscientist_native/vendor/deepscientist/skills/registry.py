@@ -24,6 +24,10 @@ _DEFAULT_COMPANION_SKILLS = (
     "intake-audit",
     "review",
     "rebuttal",
+    "experiment-execution",
+    "quest-handoffs",
+    "writing-plans",
+    "paper-reliability-verification",
 )
 
 _SKILL_ROLE_FALLBACK_ORDER = {
@@ -76,11 +80,12 @@ def _skill_order(skill_id: str, metadata: dict[str, Any]) -> tuple[int, str]:
 
 
 def _candidate_skill_roots(repo_root: Path) -> tuple[Path, ...]:
+    bundled_skills_root = repo_root.parent.parent / "resources" / "skills"
     return (
+        bundled_skills_root,
         repo_root / "src" / "skills",
         repo_root / "skills",
         repo_root.parent / "skills",
-        repo_root.parent.parent / "resources" / "skills",
     )
 
 

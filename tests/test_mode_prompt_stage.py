@@ -19,6 +19,23 @@ def test_stage_router_representative_requests():
     assert strict_route.requires_agent_decision is True
     assert stage_router.route("继续", active_stage="optimize").stage == "optimize"
     assert stage_router.route("回复审稿人 rebuttal").companion == "rebuttal"
+    assert stage_router.route("整理 AGENTS.md 交接文档").companion == "quest-handoffs"
+    assert stage_router.route("写正式实验命令和 implementation plan").companion == "writing-plans"
+    assert stage_router.route("检查论文可靠性和 OpenReview 接收状态").companion == "paper-reliability-verification"
+
+
+def test_mode_context_includes_on_demand_companion_excerpt():
+    load_plugin()
+    from hermes_plugins.deepscientist_native import mode, tools
+
+    parse_json(tools.ds_new_quest({"goal": "Companion excerpt smoke", "quest_id": "mode-companion-test"}))
+    result = mode.pre_llm_call({"session_id": "s-companion", "user_message": "请审稿并给出 claim downgrade 风险"})
+    ctx = result["context"]
+
+    assert "companion_skill: review" in ctx
+    assert "companion_skill_excerpt:" in ctx
+    assert "paper/review/review.md" in ctx
+    assert "ds_bash_exec" in ctx
 
 
 def test_stage_router_keeps_existing_strict_research_on_strict_request():

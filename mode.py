@@ -56,6 +56,9 @@ def build_mode_context(user_message: str, *, session_id: str = "local") -> str:
     if route.get("stage"):
         store.set_active_stage(str(route["stage"]), session_id)
     skill_excerpt = prompt_adapter.load_skill_excerpt(str(route.get("stage") or "scout"), max_chars=2500)
+    companion_excerpt = ""
+    if route.get("companion"):
+        companion_excerpt = prompt_adapter.load_skill_excerpt(str(route.get("companion")), max_chars=2500)
     lines = [
         "<DeepScientist mode context>",
         "mode: enabled",
@@ -80,6 +83,8 @@ def build_mode_context(user_message: str, *, session_id: str = "local") -> str:
         lines.append("quest_snapshot: none; for research workflows create or ask to create a quest with ds_new_quest according to user intent.")
     if skill_excerpt:
         lines.extend(["active_stage_skill_excerpt:", skill_excerpt])
+    if companion_excerpt:
+        lines.extend(["companion_skill_excerpt:", companion_excerpt])
     lines.append("</DeepScientist mode context>")
     return "\n".join(lines)
 

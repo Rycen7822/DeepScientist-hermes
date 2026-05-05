@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 STAGE_SKILLS = ("scout", "strict-research", "baseline", "idea", "optimize", "experiment", "analysis-campaign", "write", "finalize", "decision")
-COMPANION_SKILLS = ("figure-polish", "intake-audit", "review", "rebuttal")
+COMPANION_SKILLS = ("figure-polish", "intake-audit", "review", "rebuttal", "experiment-execution", "quest-handoffs", "writing-plans", "paper-reliability-verification")
 
 _KEYWORDS = {
     "strict-research": ["仔细调研", "认真调研", "谨慎确认", "严格调研", "严格筛选", "撰写综述", "系统综述", "literature review", "systematic review", "careful survey", "carefully research"],
@@ -20,10 +20,14 @@ _KEYWORDS = {
     "decision": ["判断", "决策", "是否", "选择", "路线", "取舍", "decision"],
 }
 _COMPANION_KEYWORDS = {
-    "review": ["审稿", "review", "评审", "修改意见", "aigc", "润色"],
+    "review": ["审稿", "review", "评审", "修改意见", "aigc", "润色", "claim downgrade", "claim scope"],
     "rebuttal": ["rebuttal", "反驳", "回复审稿", "response"],
     "figure-polish": ["图", "figure", "画图", "可视化", "plot"],
     "intake-audit": ["审计", "检查输入", "需求梳理", "intake"],
+    "experiment-execution": ["实验命令", "execute", "执行", "manifest", "planned_not_executed", "baseline gate", "runner"],
+    "quest-handoffs": ["handoff", "交接", "接手", "AGENTS.md", "quickstart", "researcher package", "同步"],
+    "writing-plans": ["implementation plan", "writing plan", "roadmap", "正式实验命令", "执行计划", "计划文档"],
+    "paper-reliability-verification": ["paper reliability", "论文可靠性", "可靠性", "OpenReview", "accepted_publication", "CCF", "CORE", "DBLP", "Crossref"],
 }
 _AMBIGUOUS = {"继续", "下一步", "go on", "continue", "接着", "继续做"}
 
