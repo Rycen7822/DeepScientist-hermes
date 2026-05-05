@@ -20,7 +20,7 @@ It does not replace the normal quest runtime. It tells you how to use the existi
 - Ordinary candidate creation, smoke checks, and route updates should stay concise.
 - Use richer milestone updates only when a candidate is promoted, a strong run finishes, the frontier shifts materially, or a fusion/debug route becomes the new main path.
 - When the user asks for the current optimization state, answer from the frontier and durable artifacts rather than from chat memory.
-- Hard execution rule: every terminal command in this stage must go through `ds_bash_exec`; do not use any other terminal path for smoke checks, quick validations, long runs, Git, Python, package-manager, or file-inspection commands.
+- Codex-native execution boundary: use Codex-native tools for routine file inspection, Git mechanics, dependency checks, smoke checks, quick validations, tests, and process management. Use `ds_bash_exec` for optimization runs whose logs must become DeepScientist quest evidence, especially formal evaluations, long runs, or frontier-shifting candidate evidence.
 
 ## Stage purpose
 
@@ -204,7 +204,7 @@ Do not treat chat summaries as substitutes for these durable records.
 
 Optimize uses the same long-run process discipline as `experiment`.
 
-- Use `ds_bash_exec` for smoke checks, quick validations, and long runs.
+- Use Codex-native execution for routine smoke checks and quick validations; use `ds_bash_exec` for long or formal optimization runs that need durable quest-local provenance.
 - Before launching a new run, inspect current managed sessions first.
 - Do not start a duplicate process for the same purpose if a valid live session already exists.
 - Use bounded smoke before long runs unless direct quick validation is already cheap and equally informative.
@@ -875,7 +875,7 @@ Use `report_type='optimization_candidate'` consistently for implementation-level
 
 ## Execution protocol
 
-- Use `ds_bash_exec` for smoke checks and full runs.
+- Use Codex-native execution for routine smoke checks; use `ds_bash_exec` for full runs or formal optimization evidence that must be auditable in the quest.
 - Prefer bounded smoke before full evaluation unless `fast-check` direct validation is cheaper and equally informative.
 - Do not keep rerunning the same unchanged candidate.
 - If a candidate fails with a clear root cause, either debug it deliberately or archive it.

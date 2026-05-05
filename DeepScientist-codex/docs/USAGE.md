@@ -14,6 +14,25 @@ Runtime path semantics follow upstream `ds --here` style:
 
 This tree stores quests, memory, artifacts, logs, bash execution state, config, cache, and the Codex session map.
 
+## Codex-native operation boundary
+
+DeepScientist mode may require an action, but Codex may already have the right native operation-layer tool for the mechanical part. Use this adapter for the research **semantic layer** and use Codex-native capabilities for routine **operation-layer** work.
+
+Codex-native operation layer:
+
+- file read/search/edit/patch, code navigation, ordinary markdown edits, and local document cleanup;
+- ordinary shell commands, dependency checks, tests, builds, lint/compile checks, and background process monitoring;
+- Git/GitHub mechanics such as status, diff, branch/worktree, commit, push, PR checks, and routine CI diagnosis;
+- ordinary planning, review prose, handoff drafting, and local web/PDF/arXiv retrieval before a result becomes DeepScientist evidence.
+
+DeepScientist semantic/provenance layer:
+
+- quest lifecycle and mode state: `ds_new_quest`, `ds_set_active_quest`, `ds_get_quest_state`, `ds_update_quest_mode`;
+- durable user requirements, quest memory, artifacts, milestones, decisions, main experiment records, analysis slices, baseline gates, paper bundles, and strict-research ledgers;
+- formal experiment, baseline, analysis-slice, or paper-facing commands whose logs must become quest-local evidence via `ds_bash_exec`.
+
+Practical rule: **Codex does the mechanical action; DeepScientist records the research meaning.** If a routine Codex-native command changes the research state or supports a claim, follow it with the relevant `ds_*` memory/artifact/experiment/paper call. Use `ds_bash_exec` only when the command itself must be auditable DeepScientist provenance with a `bash_id` and `.ds/bash_exec` log.
+
 ## Start of work
 
 1. Work from the target project root.
@@ -31,11 +50,13 @@ python /path/to/DeepScientist-codex/scripts/dsctl.py call ds_list_quests --forma
 
 ## Command reference
 
-List tools. The output is the Codex-native tool manifest and should report `transport="codex-native-cli"`, `mcp=false`, and the current tool count:
+List tools. The output is the public Codex-native canonical `ds_*` tool manifest and should report `transport="codex-native-cli"`, `mcp=false`, and the current 48-tool count. Legacy `deepscientist_*` compatibility aliases are intentionally hidden from this public manifest.
 
 ```bash
 python scripts/dsctl.py list-tools --format json
 ```
+
+Every public tool name is canonical `ds_*`. Historical `deepscientist_*` names are hidden legacy aliases: they may still work through `scripts/dsctl.py call <legacy_name> ...` during the compatibility window and return `deprecated_alias=true` plus `canonical_tool`, but agents should not choose them for new Codex workflows.
 
 Show schema:
 
@@ -63,7 +84,7 @@ python scripts/dsctl.py --project-root /path/to/project doctor --format json
 
 ## Important tools
 
-- Quest control: `ds_doctor`, `ds_list_quests`, `ds_get_quest_state`, `ds_set_active_quest`, `ds_new_quest`, `ds_update_quest_mode`, `ds_pause_quest`, `ds_resume_quest`, `ds_stop_quest`.
+- Quest control: `ds_doctor`, `ds_list_quests`, `ds_get_quest_state`, `ds_set_active_quest`, `ds_new_quest`, `ds_update_quest_mode`, `ds_events`, `ds_pause_quest`, `ds_resume_quest`, `ds_stop_quest`.
 - Durable requirements: `ds_record_user_requirement`, `ds_add_user_message` with `record_only=true`.
 - Memory: `ds_memory_search`, `ds_memory_read`, `ds_memory_write`, `ds_memory_list_recent`.
 - Artifacts and baselines: `ds_artifact_record`, `ds_resolve_runtime_refs`, `ds_get_global_status`, `ds_get_method_scoreboard`, `ds_get_optimization_frontier`, `ds_get_conversation_context`, `ds_get_paper_contract_health`, `ds_refresh_summary`, `ds_arxiv`, `ds_create_local_baseline`, `ds_confirm_baseline`, `ds_waive_baseline`, `ds_attach_baseline`.
@@ -106,5 +127,5 @@ These are native Codex skills, not MCP tools. Every durable DeepScientist operat
 - no MCP transport;
 - no external ds command;
 - no Web UI/TUI/connectors;
-- no raw shell exposure beyond curated `ds_bash_exec` for quest-local evidence logging;
+- `ds_bash_exec` is reserved for quest-local evidence logging and is not a general replacement for Codex-native shell/process tools;
 - keep research memory in DeepScientist state unless the user asks for another store.

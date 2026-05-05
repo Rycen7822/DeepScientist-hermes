@@ -8,7 +8,7 @@
 - 不调用外部 npm `ds` 命令作为正常路径。
 - 不恢复 Web UI、TUI、social/browser connector 或 raw dispatcher。
 - 从研究项目根目录运行时，runtime 数据保存在 `<project>/DeepScientist/`。
-- `scripts/dsctl.py list-tools --format json` 当前暴露 62 个 Codex-native 工具，返回 `transport="codex-native-cli"`、`mcp=false`。
+- `scripts/dsctl.py list-tools --format json` 当前公开 48 个 canonical `ds_*` Codex-native 工具，返回 `transport="codex-native-cli"`、`mcp=false`；历史 `deepscientist_*` 名称只作为隐藏兼容别名保留。
 - 已补齐原 DeepScientist Hermes MCP 业务面里的 convenience/introspection 等价工具：`ds_memory_list_recent`、`ds_resolve_runtime_refs`、`ds_get_paper_contract_health`、`ds_get_global_status`、`ds_get_method_scoreboard`、`ds_get_optimization_frontier`、`ds_get_conversation_context`、`ds_list_paper_outlines`、`ds_refresh_summary`、`ds_arxiv`。
 
 ## 内置 support skills
@@ -44,3 +44,7 @@ python ~/.codex/plugins/deepscientist-codex/scripts/dsctl.py doctor --format jso
 - `bash_exec` 对应 `ds_bash_exec`，保留 quest-local bash session、日志和状态记录。
 
 因此它是原 DeepScientist Hermes MCP 插件业务能力的 Codex native 功能等价实现，不是 FastMCP / `.mcp.json` / MCP transport 的协议克隆。
+
+## Codex 原生操作边界
+
+DeepScientist-codex 只负责研究语义层：quest 状态、持久用户需求、memory、artifact、baseline、正式实验记录、analysis campaign 状态、paper/reliability 流程，以及正式证据命令的 `ds_bash_exec` provenance。常规操作层继续使用 Codex 原生能力：文件读写搜索、普通 shell、Git/GitHub、测试/构建/lint、进程监控和本地文档编辑。简言之：Codex 做机械动作，DeepScientist 记录研究意义。

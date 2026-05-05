@@ -51,6 +51,52 @@ def test_dsctl_exposes_complete_native_schema_set():
     assert payload["mcp"] is False
 
 
+def test_dsctl_public_tools_are_canonical_ds_surface():
+    payload = run_dsctl("list-tools", "--format", "json")
+    names = {item["name"] for item in payload["tools"]}
+    assert payload["ok"] is True
+    assert payload["transport"] == "codex-native-cli"
+    assert payload["mcp"] is False
+    assert "ds_events" in names
+    assert not any(name.startswith("deepscientist_") for name in names)
+    assert payload["count"] == 48
+
+    schema_payload = run_dsctl("schema", "--format", "json")
+    schema_names = {schema["name"] for schema in schema_payload["schemas"]}
+    assert "ds_events" in schema_names
+    assert not any(name.startswith("deepscientist_") for name in schema_names)
+
+
+def test_legacy_deepscientist_aliases_are_hidden_but_call_compatible(tmp_path: Path):
+    run_dsctl(
+        "call",
+        "ds_new_quest",
+        "--json",
+        json.dumps({
+            "goal": "Legacy alias compatibility smoke quest",
+            "quest_id": "alias-smoke",
+            "title": "Legacy alias compatibility smoke quest",
+            "workspace_mode": "copilot",
+        }),
+        "--format",
+        "json",
+        project_root=tmp_path,
+    )
+    payload = run_dsctl(
+        "call",
+        "deepscientist_status",
+        "--json",
+        json.dumps({"quest_id": "alias-smoke"}),
+        "--format",
+        "json",
+        project_root=tmp_path,
+    )
+    assert payload["ok"] is True
+    assert payload["deprecated_alias"] is True
+    assert payload["legacy_tool"] == "deepscientist_status"
+    assert payload["canonical_tool"] == "ds_get_quest_state"
+
+
 def test_dsctl_doctor_uses_vendored_runtime_without_external_ds(tmp_path: Path):
     payload = run_dsctl("doctor", "--format", "json", project_root=tmp_path)
     assert payload["ok"] is True
@@ -137,6 +183,50 @@ def test_assets_and_docs_are_codex_native_not_hermes_or_mcp_only():
     assert "not MCP" in combined or "no MCP" in combined
     assert "external ds" in combined
     assert "scripts/dsctl.py" in combined
+
+
+def test_codex_docs_define_operation_vs_semantic_boundary():
+    manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    operator_skill = (PLUGIN_ROOT / "skills" / "deepscientist-codex" / "SKILL.md").read_text(encoding="utf-8")
+    usage = (PLUGIN_ROOT / "docs" / "USAGE.md").read_text(encoding="utf-8")
+    combined = json.dumps(manifest, ensure_ascii=False) + "\n" + operator_skill + "\n" + usage
+    required = [
+        "Codex-native operation boundary",
+        "Codex-native operation layer",
+        "DeepScientist semantic/provenance layer",
+        "Codex does the mechanical action; DeepScientist records the research meaning",
+        "ds_bash_exec` only when the command itself must be auditable DeepScientist provenance",
+        "not as a general shell replacement",
+        "routine file, shell, Git, test, build, and process work",
+    ]
+    for phrase in required:
+        assert phrase in combined
+
+
+def test_codex_stage_skills_do_not_force_routine_operations_through_ds_bash_exec():
+    scanned_roots = [
+        PLUGIN_ROOT / "skills",
+        PLUGIN_ROOT / "deepscientist_native" / "resources" / "skills",
+        PLUGIN_ROOT / "deepscientist_native" / "resources" / "repo" / "src" / "skills",
+    ]
+    forbidden = [
+        "Hard execution rule: every terminal command in this stage must go through `ds_bash_exec`",
+        "do not use any other terminal path for smoke tests, real runs, Git, Python, package-manager, or file-inspection commands",
+        "do not use any other terminal path for LaTeX builds, figure generation, scripted export, Git, Python, package-manager, or file-inspection commands",
+        "do not use any other terminal path for slice execution, smoke tests, Git, Python, package-manager, or file-inspection commands",
+        "**Do not use native `shell_command` / `command_execution` in this skill.**",
+        "**All shell, CLI, Python, bash, node, git, npm, uv, and environment work must go through `ds_bash_exec ...)`.**",
+        "**Any shell, CLI, Python, bash, node, git, npm, uv, or repo-inspection execution must go through `ds_bash_exec ...)`.**",
+        "**Any shell, CLI, Python, bash, node, git, npm, uv, or repo-audit execution must go through `ds_bash_exec ...)`.**",
+    ]
+    offenders: list[str] = []
+    for root in scanned_roots:
+        for path in root.rglob("SKILL.md"):
+            text = path.read_text(encoding="utf-8", errors="ignore")
+            for needle in forbidden:
+                if needle in text:
+                    offenders.append(f"{path.relative_to(PLUGIN_ROOT)} contains stale all-terminal rule: {needle}")
+    assert not offenders
 
 
 def test_codex_plugin_packages_deep_integrated_deepscientist_skills():

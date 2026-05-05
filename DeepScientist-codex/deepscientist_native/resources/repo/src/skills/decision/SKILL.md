@@ -21,8 +21,8 @@ Use this skill whenever continuation is non-trivial.
 
 ## Tool discipline
 
-- **Do not use native `shell_command` / `command_execution` in this skill.**
-- **If decision-making needs shell, CLI, Python, bash, node, git, npm, uv, or environment evidence, gather it through `ds_bash_exec ...)`.**
+- **Do not bypass DeepScientist semantic tools for durable research state; Codex-native file/shell/process tools remain appropriate for routine operation-layer work.**
+- **If decision-making needs formal shell/CLI/Python/node/git/npm/uv/environment evidence for the quest record, gather it through `ds_bash_exec`; otherwise Codex-native checks are acceptable and the final decision should be recorded through `ds_artifact_record`.**
 - **For git state inside the current quest repository or worktree, prefer `quest-local git state via backend service or Codex-controlled git action(...)` before raw shell git commands.**
 - **Use `decision` to judge the route, not as an excuse to bypass the `ds_bash_exec ...)` / `quest-local git state via backend service or Codex-controlled git action(...)` tool contract.**
 

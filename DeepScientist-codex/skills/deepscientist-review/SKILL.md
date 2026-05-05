@@ -42,7 +42,7 @@ It is also not the same as `rebuttal`.
 - Follow the shared interaction contract injected by the system prompt.
 - For ordinary active work, prefer a concise progress update once work has crossed roughly 6 tool calls with a human-meaningful delta, and do not drift beyond roughly 12 tool calls or about 8 minutes without a user-visible update.
 - When the review report, revision plan, or follow-up experiment TODO list becomes durable, send a richer user-visible progress update that says what the main risks are, what should be fixed next, and whether the next route is writing, experiment, or claim downgrade.
-- Hard execution rule: if this stage needs shell work such as document builds, scripted checks, Git inspection, or file inspection, every such command must go through the active execution surface. In Codex use `ds_bash_exec` through `scripts/dsctl.py` when shell work must become quest evidence; ordinary Codex file tools are fine for direct file IO.
+- Codex-native execution boundary: use Codex-native file/shell/Git/test/build tools for routine document builds, scripted checks, Git inspection, and file inspection. Use `ds_bash_exec` through `scripts/dsctl.py` only when the command itself must become quest evidence; ordinary Codex file tools are preferred for direct file IO.
 
 ## Purpose
 

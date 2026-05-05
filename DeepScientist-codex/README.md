@@ -9,7 +9,7 @@ This directory is a complete native Codex CLI adapter for the Hermes-native Deep
 - A direct native control script: `scripts/dsctl.py`.
 - A self-contained Python package `deepscientist_native/` with the vendored headless DeepScientist runtime, resources, schemas, and curated handlers.
 - Project-local runtime semantics: when run from a project root, DeepScientist state is stored in `<project>/DeepScientist/`.
-- Codex-native functional equivalents for the original DeepScientist Hermes MCP business surface. `scripts/dsctl.py list-tools --format json` currently reports 62 tools with `transport="codex-native-cli"` and `mcp=false`.
+- Codex-native functional equivalents for the original DeepScientist Hermes MCP business surface. `scripts/dsctl.py list-tools --format json` now reports the 48-tool public canonical `ds_*` surface with `transport="codex-native-cli"` and `mcp=false`; legacy `deepscientist_*` names are hidden compatibility aliases only.
 - MCP convenience/introspection equivalents including `ds_memory_list_recent`, `ds_resolve_runtime_refs`, `ds_get_paper_contract_health`, `ds_get_global_status`, `ds_get_method_scoreboard`, `ds_get_optimization_frontier`, `ds_get_conversation_context`, `ds_list_paper_outlines`, `ds_refresh_summary`, and `ds_arxiv`.
 
 ## What it deliberately does not provide
@@ -55,3 +55,7 @@ bash scripts/install.sh
 The installer copies this directory to `~/.codex/plugins/deepscientist-codex`, registers the local marketplace entry in `~/.agents/plugins/marketplace.json`, and enables `[plugins."deepscientist-codex@local-personal"]` in `~/.codex/config.toml`.
 
 See `docs/INSTALL.md` and `docs/USAGE.md` for full details.
+
+## Codex-native operation boundary
+
+Use DeepScientist-codex for the research semantic layer: quest state, durable requirements, memory, artifacts, baselines, formal experiment records, analysis campaign state, paper/reliability workflows, and `ds_bash_exec` provenance for formal evidence commands. Use Codex-native capabilities for routine operation-layer work: file/search/edit, ordinary shell, Git/GitHub mechanics, tests/builds/lint, process monitoring, and local prose editing. In short: Codex does the mechanical action; DeepScientist records the research meaning.

@@ -99,9 +99,15 @@ def _tool_map() -> dict[str, Any]:
     return mapping
 
 
-def _schemas_by_name() -> dict[str, dict[str, Any]]:
+def _schemas_by_name(*, include_legacy: bool = False) -> dict[str, dict[str, Any]]:
     schemas, _tools = _load_native()
-    return {schema["name"]: schema for schema in schemas.ALL_SCHEMAS}
+    schema_list = schemas.ALL_SCHEMAS if include_legacy else schemas.PUBLIC_SCHEMAS
+    return {schema["name"]: schema for schema in schema_list}
+
+
+def _legacy_alias_to_canonical() -> dict[str, str]:
+    schemas, _tools = _load_native()
+    return dict(getattr(schemas, "LEGACY_ALIAS_TO_CANONICAL", {}))
 
 
 def _parse_tool_response(raw: Any) -> dict[str, Any]:
@@ -119,6 +125,11 @@ def _friendly_payload(tool_name: str, payload: dict[str, Any]) -> dict[str, Any]
     payload = dict(payload)
     payload.setdefault("transport", "codex-native-cli")
     payload.setdefault("mcp", False)
+    legacy_aliases = _legacy_alias_to_canonical()
+    if tool_name in legacy_aliases:
+        payload.setdefault("deprecated_alias", True)
+        payload.setdefault("legacy_tool", tool_name)
+        payload.setdefault("canonical_tool", legacy_aliases[tool_name])
     if tool_name == "ds_new_quest" and "quest_id" not in payload:
         quest = payload.get("quest") if isinstance(payload.get("quest"), dict) else {}
         if quest.get("quest_id"):
@@ -156,7 +167,7 @@ def emit(payload: dict[str, Any], fmt: str) -> None:
 
 
 def command_list_tools(args: argparse.Namespace) -> dict[str, Any]:
-    schemas = _schemas_by_name()
+    schemas = _schemas_by_name(include_legacy=False)
     tools = [
         {
             "name": name,
@@ -169,12 +180,17 @@ def command_list_tools(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def command_schema(args: argparse.Namespace) -> dict[str, Any]:
-    schemas = _schemas_by_name()
+    schemas = _schemas_by_name(include_legacy=bool(args.tool_name))
     if args.tool_name:
         schema = schemas.get(args.tool_name)
         if schema is None:
-            return {"ok": False, "error": f"Unknown tool schema: {args.tool_name}", "available_tools": sorted(schemas), "transport": "codex-native-cli", "mcp": False}
-        return {"ok": True, "transport": "codex-native-cli", "mcp": False, "schema": schema}
+            public_schemas = _schemas_by_name(include_legacy=False)
+            return {"ok": False, "error": f"Unknown tool schema: {args.tool_name}", "available_tools": sorted(public_schemas), "transport": "codex-native-cli", "mcp": False}
+        payload = {"ok": True, "transport": "codex-native-cli", "mcp": False, "schema": schema}
+        legacy_aliases = _legacy_alias_to_canonical()
+        if args.tool_name in legacy_aliases:
+            payload.update({"deprecated_alias": True, "legacy_tool": args.tool_name, "canonical_tool": legacy_aliases[args.tool_name]})
+        return payload
     return {"ok": True, "transport": "codex-native-cli", "mcp": False, "schemas": list(schemas.values())}
 
 
@@ -211,7 +227,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=command_call)
 
     # Common convenience shortcuts.
-    for tool_name in ["ds_doctor", "ds_list_quests", "ds_get_quest_state", "ds_new_quest", "ds_set_active_quest", "ds_memory_search", "ds_memory_write", "ds_artifact_record", "ds_bash_exec"]:
+    for tool_name in ["ds_doctor", "ds_list_quests", "ds_get_quest_state", "ds_events", "ds_new_quest", "ds_set_active_quest", "ds_memory_search", "ds_memory_write", "ds_artifact_record", "ds_bash_exec"]:
         p = sub.add_parser(tool_name, help=f"Shortcut for call {tool_name}")
         p.add_argument("--json", help="JSON object with tool arguments")
         p.add_argument("--arg", action="append", default=[], help="Additional key=value argument; may be repeated")

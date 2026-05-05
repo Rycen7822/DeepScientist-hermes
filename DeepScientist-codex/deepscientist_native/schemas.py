@@ -91,6 +91,7 @@ DS_UPDATE_QUEST_MODE = _schema(
 )
 DS_ADD_USER_MESSAGE = _schema("ds_add_user_message", "Append a user message/instruction to a quest conversation. Set record_only=true for durable requirements that must not be queued as pending user input.", {"quest_id": S["quest_id"], "message": S["message"], "source": {"type": "string"}, "stage": S["stage"], "record_only": {"type": "boolean", "default": False}, "delivery_state": {"type": "string", "enum": ["sent", "record_only"]}}, ["message"])
 DS_RECORD_USER_REQUIREMENT = _schema("ds_record_user_requirement", "Record a durable user requirement in the quest conversation and active-user-requirements memory without leaving a pending user-message queue item.", {"quest_id": S["quest_id"], "message": S["message"], "source": {"type": "string"}, "stage": S["stage"]}, ["message"])
+DS_EVENTS = _schema("ds_events", "Read quest events directly from native quest files.", {"quest_id": S["quest_id"], "limit": S["limit"]}, ["quest_id"])
 DS_READ_QUEST_DOCUMENTS = _schema("ds_read_quest_documents", "List or read quest documents and skill docs.", {"quest_id": S["quest_id"], "names": {"type": "array", "items": {"type": "string"}}, "include_content": {"type": "boolean", "default": True}, "max_chars": {"type": "integer", "default": 12000}})
 DS_MEMORY_SEARCH = _schema("ds_memory_search", "Search DeepScientist global/quest memory cards.", {"query": S["query"], "quest_id": S["quest_id"], "scope": S["scope"], "kind": MEMORY_KIND_FIELD, "limit": S["limit"]}, ["query"])
 DS_MEMORY_READ = _schema("ds_memory_read", "Read a DeepScientist memory card by id or path.", {"card_id": {"type": "string"}, "path": S["path"], "quest_id": S["quest_id"], "scope": S["scope"]})
@@ -137,7 +138,7 @@ DEEPSCIENTIST_LIST_QUESTS = {**DS_LIST_QUESTS, "name": "deepscientist_list_quest
 DEEPSCIENTIST_STATUS = {**DS_GET_QUEST_STATE, "name": "deepscientist_status"}
 DEEPSCIENTIST_NEW_QUEST = {**DS_NEW_QUEST, "name": "deepscientist_new_quest"}
 DEEPSCIENTIST_SEND_MESSAGE = {**DS_ADD_USER_MESSAGE, "name": "deepscientist_send_message"}
-DEEPSCIENTIST_EVENTS = _schema("deepscientist_events", "Read quest events directly from native quest files.", {"quest_id": S["quest_id"], "limit": S["limit"]}, ["quest_id"])
+DEEPSCIENTIST_EVENTS = {**DS_EVENTS, "name": "deepscientist_events"}
 DEEPSCIENTIST_READ_DOCUMENTS = {**DS_READ_QUEST_DOCUMENTS, "name": "deepscientist_read_documents"}
 DEEPSCIENTIST_MEMORY_SEARCH = {**DS_MEMORY_SEARCH, "name": "deepscientist_memory_search"}
 DEEPSCIENTIST_MEMORY_WRITE = {**DS_MEMORY_WRITE, "name": "deepscientist_memory_write"}
@@ -150,7 +151,7 @@ DEEPSCIENTIST_RESUME = {**DS_RESUME_QUEST, "name": "deepscientist_resume"}
 
 NATIVE_SCHEMAS = [
     DS_DOCTOR, DS_LIST_QUESTS, DS_GET_QUEST_STATE, DS_SET_ACTIVE_QUEST, DS_NEW_QUEST, DS_UPDATE_QUEST_MODE,
-    DS_ADD_USER_MESSAGE, DS_RECORD_USER_REQUIREMENT, DS_READ_QUEST_DOCUMENTS, DS_MEMORY_SEARCH, DS_MEMORY_READ,
+    DS_ADD_USER_MESSAGE, DS_RECORD_USER_REQUIREMENT, DS_EVENTS, DS_READ_QUEST_DOCUMENTS, DS_MEMORY_SEARCH, DS_MEMORY_READ,
     DS_MEMORY_LIST_RECENT,
     DS_MEMORY_WRITE, DS_ARTIFACT_RECORD, DS_CONFIRM_BASELINE, DS_WAIVE_BASELINE,
     DS_ATTACH_BASELINE, DS_CREATE_LOCAL_BASELINE, DS_SUBMIT_IDEA, DS_LIST_RESEARCH_BRANCHES,
@@ -171,4 +172,23 @@ ALIAS_SCHEMAS = [
     DEEPSCIENTIST_CONFIRM_BASELINE, DEEPSCIENTIST_SUBMIT_IDEA, DEEPSCIENTIST_RECORD_EXPERIMENT,
     DEEPSCIENTIST_SUBMIT_PAPER_BUNDLE, DEEPSCIENTIST_PAUSE, DEEPSCIENTIST_RESUME,
 ]
-ALL_SCHEMAS = NATIVE_SCHEMAS + ALIAS_SCHEMAS
+LEGACY_ALIAS_TO_CANONICAL = {
+    "deepscientist_doctor": "ds_doctor",
+    "deepscientist_list_quests": "ds_list_quests",
+    "deepscientist_status": "ds_get_quest_state",
+    "deepscientist_new_quest": "ds_new_quest",
+    "deepscientist_send_message": "ds_add_user_message",
+    "deepscientist_events": "ds_events",
+    "deepscientist_read_documents": "ds_read_quest_documents",
+    "deepscientist_memory_search": "ds_memory_search",
+    "deepscientist_memory_write": "ds_memory_write",
+    "deepscientist_confirm_baseline": "ds_confirm_baseline",
+    "deepscientist_submit_idea": "ds_submit_idea",
+    "deepscientist_record_experiment": "ds_record_main_experiment",
+    "deepscientist_submit_paper_bundle": "ds_submit_paper_bundle",
+    "deepscientist_pause": "ds_pause_quest",
+    "deepscientist_resume": "ds_resume_quest",
+}
+PUBLIC_SCHEMAS = NATIVE_SCHEMAS
+LEGACY_ALIAS_SCHEMAS = ALIAS_SCHEMAS
+ALL_SCHEMAS = PUBLIC_SCHEMAS + LEGACY_ALIAS_SCHEMAS

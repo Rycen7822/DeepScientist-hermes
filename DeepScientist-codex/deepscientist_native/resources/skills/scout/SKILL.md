@@ -18,8 +18,8 @@ Use this skill when the quest does not yet have a stable research frame.
 
 ## Tool discipline
 
-- **Do not use native `shell_command` / `command_execution` in this skill.**
-- **Any shell, CLI, Python, bash, node, git, npm, uv, or repo-inspection execution must go through `ds_bash_exec ...)`.**
+- **Do not bypass DeepScientist semantic tools for durable research state; Codex-native file/shell/process tools remain appropriate for routine operation-layer work.**
+- **Use Codex-native execution for routine shell/CLI/Python/node/git/npm/uv/repo-inspection checks. Use `ds_bash_exec` only when the inspection command itself must become DeepScientist quest evidence.**
 - **For git inspection inside the current quest repository or worktree, prefer `quest-local git state via backend service or Codex-controlled git action(...)` before raw shell git commands.**
 - **If scouting only needs durable quest context, prefer `artifact.read_quest_documents(...)`, `artifact.get_quest_state(...)`, and `memory.*` instead of shelling out.**
 

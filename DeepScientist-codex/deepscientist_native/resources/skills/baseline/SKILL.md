@@ -14,13 +14,13 @@ The target is one trustworthy baseline line, not an endless reproduction diary.
 - Follow the shared interaction contract injected by the system prompt.
 - Keep ordinary setup and debugging updates concise.
 - Use richer milestone updates only when the baseline becomes trusted, caveated, blocked, waived, or route-changing.
-- Hard execution rule: every terminal command in this stage must go through `ds_bash_exec`; do not use any other terminal path for setup, reproduction, monitoring, verification, Git, Python, package-manager, or file-inspection commands.
+- Codex-native execution boundary: use Codex-native tools for routine setup inspection, Git mechanics, dependency checks, and non-evidence verification. Use `ds_bash_exec` for baseline setup, reproduction, monitoring, or verification commands whose logs must be durable DeepScientist evidence.
 - Prefer `ds_bash_exec` for setup, reproduction, monitoring, and verification commands so the baseline line stays durable and auditable.
 
 ## Tool discipline
 
-- **Do not use native `shell_command` / `command_execution` in this skill.**
-- **All shell, CLI, Python, bash, node, git, npm, uv, and environment work must go through `ds_bash_exec ...)`.**
+- **Do not bypass DeepScientist semantic tools for durable research state; Codex-native file/shell/process tools remain appropriate for routine operation-layer work.**
+- **Use Codex-native execution for routine shell/CLI/Python/node/git/npm/uv/environment checks. Use `ds_bash_exec` for baseline setup, reproduction, monitoring, or verification that must be durable quest evidence.**
 - **For git work inside the current quest repository or worktree, prefer `quest-local git state via backend service or Codex-controlled git action(...)` before raw shell git commands.**
 - **If a generic git smoke test is needed outside the quest repo, use `ds_bash_exec ...)` in an isolated scratch repository.**
 

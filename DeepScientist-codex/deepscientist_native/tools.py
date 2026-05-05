@@ -844,8 +844,12 @@ def _read_events_payload(args: dict[str, Any]) -> dict[str, Any]:
 
 
 @_guard
-def deepscientist_events(args: dict[str, Any]) -> dict[str, Any]:
+def ds_events(args: dict[str, Any]) -> dict[str, Any]:
     return _read_events_payload(args)
+
+
+# Hidden compatibility alias for the former Hermes-style tool name.
+deepscientist_events = ds_events
 
 
 @_guard

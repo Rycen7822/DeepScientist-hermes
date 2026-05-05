@@ -209,7 +209,7 @@ git commit -m "docs: add implementation plan for [feature]"
 
 When the plan is for a DeepScientist quest's experiment execution rather than a normal software feature (see `references/deepscientist-experiment-roadmaps.md` for the session-tested checklist):
 
-1. Load the relevant DeepScientist stage skill and follow its tool discipline; use `ds_bash_exec` for shell/Git/Python checks and `ds_artifact_record` / `ds_memory_write` for durable outputs.
+1. Load the relevant DeepScientist stage skill and follow the Codex-native operation boundary: use Codex-native tools for routine shell/Git/Python checks, and use `ds_bash_exec` only for formal evidence commands that need quest-local provenance. Use `ds_artifact_record` / `ds_memory_write` for durable outputs.
 2. Read the user's requested source order exactly. For split research ideas, read the top-level `idea/*foundational_report.md` / index first, then active docs such as `paper_main.md`, `experiment_protocol.md`, `implementation_spec.md`, appendix/theory, related work, risk register, and download/resource manifest.
 3. Save the roadmap under the quest's requested experiment directory, commonly `experiments/EXPERIMENT_EXECUTION_PLAN.md`, not only in chat.
 4. Structure it as an ordered execution pipeline: preflight/baseline/resource gate, engineering scaffold, data split manifest, candidate/floorplan enumeration, trajectory extraction, chart/model-specific fitting, score implementation, sanity checks, main benchmark, statistics/robustness, retrofit/recoverability, appendix experiments, and paper-facing packaging.

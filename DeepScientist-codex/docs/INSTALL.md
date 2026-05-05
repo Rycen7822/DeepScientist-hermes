@@ -1,6 +1,6 @@
 # Install DeepScientist Codex Native
 
-This adapter is installed as a native Codex CLI plugin. It is not MCP. After install, `scripts/dsctl.py list-tools --format json` should report the Codex-native manifest with `transport="codex-native-cli"`, `mcp=false`, and the current 62-tool business surface, including the original Hermes MCP convenience/introspection equivalents.
+This adapter is installed as a native Codex CLI plugin. It is not MCP. After install, `scripts/dsctl.py list-tools --format json` should report the Codex-native manifest with `transport="codex-native-cli"`, `mcp=false`, and the current 48-tool public canonical `ds_*` business surface, including the original Hermes MCP convenience/introspection equivalents. Legacy `deepscientist_*` aliases are hidden from the public manifest and kept only for compatibility calls.
 
 ## Local install
 

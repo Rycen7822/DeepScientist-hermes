@@ -24,7 +24,7 @@ This skill intentionally absorbs the strongest old DeepScientist writing discipl
 
 - Follow the shared interaction contract injected by the system prompt.
 - For ordinary active work, prefer a concise progress update once work has crossed roughly 6 tool calls with a human-meaningful delta, and do not drift beyond roughly 12 tool calls or about 8 minutes without a user-visible update.
-- Hard execution rule: every terminal command in this stage must go through `ds_bash_exec`; do not use any other terminal path for LaTeX builds, figure generation, scripted export, Git, Python, package-manager, or file-inspection commands.
+- Codex-native execution boundary: use Codex-native file/shell/Git/test/build tools for routine inspection, local edits, non-evidence checks, and ordinary document work. Use `ds_bash_exec` for durable paper-facing builds, figure regeneration, scripted exports, or validations whose logs must remain quest-local and reviewable.
 - Prefer `ds_bash_exec` for durable document-build commands such as LaTeX compilation, figure regeneration, and scripted export steps so logs remain quest-local and reviewable.
 - Keep ordinary subtask completions concise. When a paper/draft milestone is actually completed, upgrade to a richer `ds_artifact_record payload={'kind': 'milestone'}, reply_mode='threaded', ...)` report instead of another short progress update.
 - That richer writing-stage milestone report should normally cover: which draft, section, or outline milestone finished, what is now supportable, what is still missing, and the exact recommended next revision or route decision.
