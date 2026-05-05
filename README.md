@@ -40,6 +40,7 @@ skills/deepscientist-mode/          Compact operator skill for Hermes agent
 resources/skills/                   DeepScientist stage skills
 resources/prompts/                  Prompt fragments used by the plugin
 vendor/deepscientist/               Retained headless DeepScientist runtime
+DeepScientist-codex/                Native Codex CLI adapter for the same headless runtime
 docs/USAGE.md                       Agent-facing operation manual
 docs/AGENT_PROJECT_INSTALL.md       Agent-facing project-local install manual
 tests/                              Contract and regression tests
@@ -79,6 +80,49 @@ HERMES_ENABLE_PROJECT_PLUGINS=true hermes
 Standalone plugins must still be enabled through the active Hermes home config, unless you use a project-local `HERMES_HOME`. See `docs/AGENT_PROJECT_INSTALL.md` for the exact project-local steps and trade-offs.
 
 A global install is also possible when you want this plugin available from the active Hermes home. In that case the plugin code lives under `${HERMES_HOME:-$HOME/.hermes}/plugins/deepscientist/`, the plugin name `deepscientist` must be enabled in `$HERMES_HOME/config.yaml`, and Hermes should still be launched from the research project directory whose DeepScientist runtime should live in `<research-project>/DeepScientist/`.
+
+## Codex CLI native adapter
+
+This repository also includes `DeepScientist-codex/`, a native Codex CLI adapter for the same retained DeepScientist headless runtime. Use it when the operator is Codex CLI rather than Hermes Agent.
+
+Important boundaries:
+
+- `DeepScientist-codex/` is not MCP. It does not create `.mcp.json`, does not register a server transport, and does not start the original FastMCP server.
+- It does not call the external npm `ds` command for normal work.
+- It provides Codex-native functional equivalents for the original DeepScientist Hermes MCP business surface through `scripts/dsctl.py` and `ds_*` handlers.
+- Research runtime data still lives in the target research project under `<project>/DeepScientist/`.
+
+Install it into Codex from this repository:
+
+```bash
+cd <plugin-source>/DeepScientist-codex
+bash scripts/install.sh
+```
+
+The installer copies the adapter to `~/.codex/plugins/deepscientist-codex`, registers a local marketplace entry in `~/.agents/plugins/marketplace.json`, enables `[plugins."deepscientist-codex@local-personal"]` in `~/.codex/config.toml`, and runs the bundled doctor check.
+
+After install, initialize and verify it from the research project root:
+
+```bash
+bash ~/.codex/plugins/deepscientist-codex/scripts/init_project.sh /path/to/project
+python ~/.codex/plugins/deepscientist-codex/scripts/dsctl.py --project-root /path/to/project doctor --format json
+python ~/.codex/plugins/deepscientist-codex/scripts/dsctl.py --project-root /path/to/project list-tools --format json
+```
+
+The `list-tools` output should report `transport="codex-native-cli"`, `mcp=false`, and the Codex-native tool surface. For detailed usage, see `DeepScientist-codex/README.md`, `DeepScientist-codex/README.zh-CN.md`, `DeepScientist-codex/docs/INSTALL.md`, and `DeepScientist-codex/docs/USAGE.md`.
+
+When asking an agent to install the Codex adapter, use this prompt and replace the paths:
+
+```text
+Please install the DeepScientist Codex native adapter for Codex CLI.
+Source repository to fetch first: https://github.com/Rycen7822/DeepScientist-hermes
+If the repository is not already cloned, clone it into a safe temporary or user-selected work directory. If it is already cloned, pull/update it. Use the cloned repository root as <plugin-source>; it must contain DeepScientist-codex/scripts/install.sh, DeepScientist-codex/docs/INSTALL.md, and DeepScientist-codex/docs/USAGE.md.
+Read <plugin-source>/DeepScientist-codex/docs/INSTALL.md first and follow it exactly.
+Run the installer from <plugin-source>/DeepScientist-codex with bash scripts/install.sh.
+Do not create .mcp.json, do not configure MCP servers, do not start FastMCP, and do not use the external npm ds command as the normal runtime path.
+After installation, initialize the target research project with ~/.codex/plugins/deepscientist-codex/scripts/init_project.sh <target-project> and verify doctor plus list-tools from that project.
+Report the source clone path, installed Codex plugin directory, target research project, DeepScientist runtime directory, list-tools transport/mcp values, verification results, and completion time.
+```
 
 ## Agent installation prompts
 

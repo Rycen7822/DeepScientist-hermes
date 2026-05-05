@@ -1,0 +1,24 @@
+{
+  "name": "deepscientist-codex",
+  "version": "0.1.0",
+  "description": "Native Codex CLI adapter for DeepScientist with vendored headless runtime, project-local quests, memory, artifacts, and dsctl scripts.",
+  "author": {
+    "name": "DeepScientist Hermes adaptation"
+  },
+  "skills": "./skills",
+  "interface": {
+    "displayName": "DeepScientist Codex Native",
+    "shortDescription": "Use DeepScientist research quests from Codex CLI through native dsctl scripts.",
+    "longDescription": "A self-contained Codex CLI plugin that embeds the retained headless DeepScientist runtime and exposes project-local quest, memory, artifact, paper, and experiment operations through scripts/dsctl.py.",
+    "developerName": "DeepScientist Hermes adaptation",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Use DeepScientist Codex Native for research quest state. Load the deepscientist-codex skill, run scripts/dsctl.py doctor from the project root, and persist important results through dsctl calls."
+    ],
+    "brandColor": "#4D6A7A"
+  }
+}

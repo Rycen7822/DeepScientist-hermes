@@ -40,6 +40,7 @@ skills/deepscientist-mode/          给 Hermes agent 的紧凑操作 skill
 resources/skills/                   DeepScientist 阶段 skills
 resources/prompts/                  插件使用的 prompt fragments
 vendor/deepscientist/               保留的 headless DeepScientist runtime
+DeepScientist-codex/                同一 headless runtime 的 Codex CLI 原生适配器
 docs/USAGE.md                       给 agent 的详细操作手册
 docs/AGENT_PROJECT_INSTALL.md       给 agent 的项目级安装手册
 tests/                              合同测试和回归测试
@@ -79,6 +80,49 @@ HERMES_ENABLE_PROJECT_PLUGINS=true hermes
 standalone 插件仍需要在当前 Hermes home config 中启用，除非使用项目本地 `HERMES_HOME`。项目级安装的完整步骤和取舍见 `docs/AGENT_PROJECT_INSTALL.md`。
 
 如果希望插件对当前 Hermes 用户全局可用，也可以做全局安装。全局安装时，插件代码位于 `${HERMES_HOME:-$HOME/.hermes}/plugins/deepscientist/`，并且需要在 `$HERMES_HOME/config.yaml` 的 `plugins.enabled` 中启用 `deepscientist`；但具体研究任务仍应从对应研究项目目录启动 Hermes，使 DeepScientist runtime 位于 `<research-project>/DeepScientist/`。
+
+## Codex CLI 原生适配器
+
+本仓库还包含 `DeepScientist-codex/`，它是同一套保留版 DeepScientist headless runtime 的 Codex CLI 原生适配。操作入口是 Codex CLI 时使用它，而不是安装 Hermes Agent 插件。
+
+重要边界：
+
+- `DeepScientist-codex/` 不是 MCP。它不会创建 `.mcp.json`，不会注册 server transport，也不会启动原 FastMCP server。
+- 正常工作时不调用外部 npm `ds` 命令。
+- 它通过 `scripts/dsctl.py` 和 `ds_*` handlers 提供原 DeepScientist Hermes MCP 业务面的 Codex-native 功能等价实现。
+- 研究 runtime 数据仍保存在目标研究项目的 `<project>/DeepScientist/`。
+
+从本仓库安装到 Codex：
+
+```bash
+cd <plugin-source>/DeepScientist-codex
+bash scripts/install.sh
+```
+
+安装脚本会把适配器复制到 `~/.codex/plugins/deepscientist-codex`，在 `~/.agents/plugins/marketplace.json` 注册本地 marketplace 条目，在 `~/.codex/config.toml` 启用 `[plugins."deepscientist-codex@local-personal"]`，并运行内置 doctor 检查。
+
+安装后，从研究项目根目录初始化并验证：
+
+```bash
+bash ~/.codex/plugins/deepscientist-codex/scripts/init_project.sh /path/to/project
+python ~/.codex/plugins/deepscientist-codex/scripts/dsctl.py --project-root /path/to/project doctor --format json
+python ~/.codex/plugins/deepscientist-codex/scripts/dsctl.py --project-root /path/to/project list-tools --format json
+```
+
+`list-tools` 输出应包含 `transport="codex-native-cli"`、`mcp=false` 和 Codex-native 工具面。更多细节见 `DeepScientist-codex/README.md`、`DeepScientist-codex/README.zh-CN.md`、`DeepScientist-codex/docs/INSTALL.md` 和 `DeepScientist-codex/docs/USAGE.md`。
+
+如果把 Codex 适配器安装任务交给 agent，可以使用下面的 prompt 并替换路径：
+
+```text
+请安装 DeepScientist Codex native adapter，供 Codex CLI 使用。
+需要先拉取的源码仓库：https://github.com/Rycen7822/DeepScientist-hermes
+如果本机还没有 clone 该仓库，请 clone 到安全的临时目录或用户指定工作目录；如果已经 clone，请先 pull/update。使用 clone 后的仓库根目录作为 <plugin-source>；它必须包含 DeepScientist-codex/scripts/install.sh、DeepScientist-codex/docs/INSTALL.md 和 DeepScientist-codex/docs/USAGE.md。
+请先阅读 <plugin-source>/DeepScientist-codex/docs/INSTALL.md，并严格按该文档执行。
+从 <plugin-source>/DeepScientist-codex 运行 bash scripts/install.sh。
+不要创建 .mcp.json，不要配置 MCP server，不要启动 FastMCP，不要把外部 npm ds 命令作为正常 runtime 路径。
+安装后，用 ~/.codex/plugins/deepscientist-codex/scripts/init_project.sh <target-project> 初始化目标研究项目，并在该项目上验证 doctor 和 list-tools。
+最终回复请给出源码 clone 路径、已安装的 Codex plugin 目录、目标研究项目、DeepScientist runtime 目录、list-tools 的 transport/mcp 值、验证结果和完成时间。
+```
 
 ## 给 agent 的安装 prompts
 
