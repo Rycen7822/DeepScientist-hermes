@@ -1,10 +1,59 @@
-# DeepScientist Hermes 插件
+<h1 align="center">
+  DeepScientist × Hermes Agent
+</h1>
 
-[English](README.md) | 中文
+<p align="center">
+  <a href="https://github.com/ResearAI/DeepScientist">上游 DeepScientist</a> |
+  <a href="README.md">English README</a> |
+  <a href="docs/USAGE.md">Hermes 使用指南</a> |
+  <a href="docs/AGENT_PROJECT_INSTALL.md">项目级安装</a> |
+  <a href="DeepScientist-codex/README.zh-CN.md">Codex 适配器</a>
+</p>
 
-本仓库把 [DeepScientist](https://github.com/ResearAI/DeepScientist) 改造成 Hermes Agent 原生插件。
+<p align="center">
+  <a href="plugin.yaml"><img alt="Hermes native plugin" src="https://img.shields.io/badge/Hermes-Native%20Plugin-4D6A7A?style=for-the-badge"></a>
+  <a href="DeepScientist-codex/README.zh-CN.md"><img alt="Codex native adapter" src="https://img.shields.io/badge/Codex-Native%20Adapter-2563EB?style=for-the-badge"></a>
+  <a href="#这个项目不是什么"><img alt="No raw MCP" src="https://img.shields.io/badge/Raw%20MCP-Not%20Exposed-2E7D32?style=for-the-badge"></a>
+  <a href="#项目本地-runtime"><img alt="Project local runtime" src="https://img.shields.io/badge/Runtime-Project%20Local-7C3AED?style=for-the-badge"></a>
+</p>
 
-DeepScientist 是 ResearAI 的科研操作系统。本项目保留 DeepScientist 的核心 headless 研究运行时，并把它适配成 Hermes Agent 插件，使 Hermes 成为唯一工作入口，用来管理 research quest、memory、artifact、实验、分析与论文写作流程。
+<p align="center">
+  <strong>一套研究 runtime</strong> ·
+  <strong>两条原生 agent 入口</strong> ·
+  <strong>项目本地 quests</strong> ·
+  <strong>可审计实验与 artifacts</strong>
+</p>
+
+<p align="center">
+  <strong>Hermes 或 Codex 做机械动作，DeepScientist 记录研究意义。</strong>
+</p>
+
+---
+
+本仓库把 [DeepScientist](https://github.com/ResearAI/DeepScientist) 适配为 Hermes Agent 与 Codex CLI 的原生 agent 集成。
+
+DeepScientist 是 ResearAI 的科研操作系统。本项目保留 DeepScientist 的 headless 研究运行时，并通过高层 `ds_*` 工具、插件内 skills、项目本地状态和面向 agent 的安装/运行文档把它暴露给 Hermes 与 Codex。
+
+## 为什么需要这个仓库？
+
+科研工作是长周期的：论文、baseline、实验分支、日志、artifact、memory、analysis 和写作材料通常无法靠一次聊天保存完整。本仓库的目标是让现代 coding agent 使用这套结构化研究 runtime，而不把用户重新带回原 UI surface。
+
+| 常见痛点 | 这个集成保留下来的内容 |
+| --- | --- |
+| 研究想法容易散落在聊天记录里 | quest、requirements、stage state 和 memory 保存在 `<project>/DeepScientist/`。 |
+| 实验和 baseline 后续难审计 | baseline、experiment record、analysis slice、bash provenance 和 milestone 都成为 DeepScientist artifact。 |
+| 文献和论文工作离开 agent loop | strict-research ledger、reliability card、writing plan、review 和 paper bundle 被打包成工具与 skills。 |
+| 不同 agent CLI 需要不同安装方式 | Hermes Agent 使用原生插件；Codex CLI 使用独立的 `DeepScientist-codex/` 原生适配器。 |
+
+## 一眼看懂
+
+| 范围 | Hermes Agent 路径 | Codex CLI 路径 |
+| --- | --- | --- |
+| 入口 | `plugin.yaml`、`__init__.py`、`/ds ...`、Hermes `ds_*` tools | `DeepScientist-codex/scripts/dsctl.py` 和 local-personal Codex plugin install |
+| 操作 skill | `deepscientist:deepscientist-mode` | `deepscientist-codex` |
+| runtime 数据 | `<project>/DeepScientist/` | `<project>/DeepScientist/` |
+| 工具命名 | 高层 `ds_*` Hermes 工具 | 公开 48 个 canonical `ds_*` 工具；历史 `deepscientist_*` 只作为隐藏兼容别名 |
+| 边界 | 不向用户暴露 raw MCP，正常工作不调用全局 npm `ds` 命令 | 不创建 `.mcp.json`，不注册 MCP server transport，不启动 FastMCP，正常工作不调用全局 npm `ds` 命令 |
 
 ## 这个项目是什么
 
@@ -12,7 +61,8 @@ DeepScientist 是 ResearAI 的科研操作系统。本项目保留 DeepScientist
 - 一个 Hermes-native 的 DeepScientist 核心科研流程集成。
 - 一个自包含插件源码树，保留的 headless runtime 位于 `vendor/deepscientist`。
 - 一组高层 `ds_*` Hermes 工具，不向用户暴露 raw MCP 调度。
-- 一组随插件打包的 DeepScientist 阶段、companion 和深度集成 support skills，包括严格文献调研 `strict-research`、`review`、`experiment-execution`、`quest-handoffs`、`writing-plans`、`paper-reliability-verification` 以及内置 `paper-reliability-verifier` 工具 skill。
+- 一组随插件打包的 DeepScientist skills：阶段、companion、strict literature research、`review`、`experiment-execution`、`quest-handoffs`、`writing-plans`、`paper-reliability-verification` 以及内置 `paper-reliability-verifier` workflow。
+- 一个位于 `DeepScientist-codex/` 的 Codex-native adapter，供操作入口是 Codex CLI 的用户使用。
 - 一套项目本地 runtime 布局，默认遵循上游 `ds --here` 语义：运行数据位于 `<project>/DeepScientist/`。
 
 ## 这个项目不是什么
@@ -22,6 +72,32 @@ DeepScientist 是 ResearAI 的科研操作系统。本项目保留 DeepScientist
 - 不向用户暴露 raw MCP。
 - 不提供 Web UI、TUI、browser connector 或 social connector 入口。
 - 不需要修改 Hermes core。
+
+## 它能帮 agent 完成什么？
+
+### 1. 启动真实研究 quest
+
+- 从论文、仓库或自然语言研究目标创建 quest
+- 保留 goal、mode、active stage、requirements 和累计 context
+- 将状态留在项目里，而不是短暂聊天历史里
+
+### 2. 以 provenance 方式复现 baseline 和运行实验
+
+- attach 或 confirm baseline
+- 记录 main experiment run、实验设置、指标和结论
+- 对真正影响研究证据的命令保留 quest-local execution evidence
+
+### 3. 构建可回顾的研究 memory
+
+- 写入可搜索 memory cards 和 decision records
+- 记录 milestones 和结构化 artifacts
+- 读取 quest documents、status、analysis campaigns 和 event traces
+
+### 4. 把结果变成可交付材料
+
+- 维护 paper bundle 和 outline state
+- 支持 strict literature research 和 reliability verification
+- 打包 writing plans、review workflows 和 final report artifacts
 
 ## 仓库结构
 
@@ -36,7 +112,7 @@ mode.py                             DeepScientist mode hooks
 stage_router.py                     阶段和 companion skill 路由
 prompt_adapter.py                   prompt/tool-name 适配
 schemas.py                          工具 schema 和常量
-skills/deepscientist-mode/          给 Hermes agent 的紧凑操作 skill
+skills/deepscientist-mode/          给 Hermes Agent 的紧凑操作 skill
 resources/skills/                   DeepScientist 阶段、companion 和 support skills
 resources/prompts/                  插件使用的 prompt fragments
 vendor/deepscientist/               保留的 headless DeepScientist runtime
@@ -81,6 +157,16 @@ standalone 插件仍需要在当前 Hermes home config 中启用，除非使用�
 
 如果希望插件对当前 Hermes 用户全局可用，也可以做全局安装。全局安装时，插件代码位于 `${HERMES_HOME:-$HOME/.hermes}/plugins/deepscientist/`，并且需要在 `$HERMES_HOME/config.yaml` 的 `plugins.enabled` 中启用 `deepscientist`；但具体研究任务仍应从对应研究项目目录启动 Hermes，使 DeepScientist runtime 位于 `<research-project>/DeepScientist/`。
 
+## 项目本地 runtime
+
+DeepScientist 状态明确是项目本地的：
+
+```text
+<project>/DeepScientist/
+```
+
+这会把 quests、artifacts、memory、bash provenance、paper bundles 和 runtime config 留在产生它们的研究代码/数据旁边。
+
 ## Codex CLI 原生适配器
 
 本仓库还包含 `DeepScientist-codex/`，它是同一套保留版 DeepScientist headless runtime 的 Codex CLI 原生适配。操作入口是 Codex CLI 时使用它，而不是安装 Hermes Agent 插件。
@@ -89,7 +175,8 @@ standalone 插件仍需要在当前 Hermes home config 中启用，除非使用�
 
 - `DeepScientist-codex/` 不是 MCP。它不会创建 `.mcp.json`，不会注册 server transport，也不会启动原 FastMCP server。
 - 正常工作时不调用外部 npm `ds` 命令。
-- 它通过 `scripts/dsctl.py` 和 `ds_*` handlers 提供原 DeepScientist Hermes MCP 业务面的 Codex-native 功能等价实现。
+- 它通过 `scripts/dsctl.py` 和 canonical `ds_*` handlers 提供原 DeepScientist Hermes MCP 业务面的 Codex-native 功能等价实现。
+- 公开 `list-tools` 报告 48 个 canonical `ds_*` 工具，包括 `ds_events`；历史 `deepscientist_*` 名称只作为隐藏兼容别名保留。
 - 研究 runtime 数据仍保存在目标研究项目的 `<project>/DeepScientist/`。
 
 从本仓库安装到 Codex：
@@ -99,7 +186,7 @@ cd <plugin-source>/DeepScientist-codex
 bash scripts/install.sh
 ```
 
-安装脚本会把适配器复制到 `~/.codex/plugins/deepscientist-codex`，在 `~/.agents/plugins/marketplace.json` 注册本地 marketplace 条目，在 `~/.codex/config.toml` 启用 `[plugins."deepscientist-codex@local-personal"]`，并运行内置 doctor 检查。
+安装脚本会把适配器复制到 `~/.codex/plugins/deepscientist-codex`；如果目标目录已存在，会先备份为 `~/.codex/plugins/deepscientist-codex.backup-<timestamp>`；随后在 `~/.agents/plugins/marketplace.json` 注册本地 marketplace 条目，在 `~/.codex/config.toml` 启用 `[plugins."deepscientist-codex@local-personal"]`，并运行内置 doctor 检查。
 
 安装后，从研究项目根目录初始化并验证：
 
@@ -109,7 +196,7 @@ python ~/.codex/plugins/deepscientist-codex/scripts/dsctl.py --project-root /pat
 python ~/.codex/plugins/deepscientist-codex/scripts/dsctl.py --project-root /path/to/project list-tools --format json
 ```
 
-`list-tools` 输出应包含 `transport="codex-native-cli"`、`mcp=false` 和 Codex-native 工具面。更多细节见 `DeepScientist-codex/README.md`、`DeepScientist-codex/README.zh-CN.md`、`DeepScientist-codex/docs/INSTALL.md` 和 `DeepScientist-codex/docs/USAGE.md`。
+`list-tools` 输出应包含 `transport="codex-native-cli"`、`mcp=false`、`count=48`、`ds_events`，并且没有公开 `deepscientist_*` 工具。更多细节见 `DeepScientist-codex/README.md`、`DeepScientist-codex/README.zh-CN.md`、`DeepScientist-codex/docs/INSTALL.md` 和 `DeepScientist-codex/docs/USAGE.md`。
 
 如果把 Codex 适配器安装任务交给 agent，可以使用下面的 prompt 并替换路径：
 
@@ -195,5 +282,5 @@ python -m compileall -q .
 ## 上游与许可证
 
 - 上游 DeepScientist：https://github.com/ResearAI/DeepScientist
-- 本仓库是把保留的 DeepScientist 核心能力适配为 Hermes Agent 插件的改造项目。
+- 本仓库是把保留的 DeepScientist 核心能力适配为 Hermes Agent 插件和 Codex-native adapter 的改造项目。
 - 许可证：Apache-2.0。见 `LICENSE`。
