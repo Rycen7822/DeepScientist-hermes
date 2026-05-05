@@ -185,6 +185,31 @@ def test_assets_and_docs_are_codex_native_not_hermes_or_mcp_only():
     assert "scripts/dsctl.py" in combined
 
 
+def test_bilingual_readmes_document_current_install_flow():
+    readme = (PLUGIN_ROOT / "README.md").read_text(encoding="utf-8")
+    zh_readme = (PLUGIN_ROOT / "README.zh-CN.md").read_text(encoding="utf-8")
+    install_doc = (PLUGIN_ROOT / "docs" / "INSTALL.md").read_text(encoding="utf-8")
+    combined_install = readme + "\n" + zh_readme + "\n" + install_doc
+
+    assert "README.zh-CN.md" in readme
+    assert "README.md" in zh_readme
+    for phrase in [
+        "48-tool public canonical `ds_*`",
+        "48 个 canonical `ds_*`",
+        "legacy `deepscientist_*`",
+        "历史 `deepscientist_*`",
+        "ds_events",
+        "scripts/install.sh",
+        "scripts/init_project.sh",
+        "marketplace.json",
+        "config.toml",
+        "CODEX_HOME",
+        "AGENTS_HOME",
+        "backup",
+    ]:
+        assert phrase in combined_install
+
+
 def test_codex_docs_define_operation_vs_semantic_boundary():
     manifest = json.loads((PLUGIN_ROOT / ".codex-plugin" / "plugin.json").read_text(encoding="utf-8"))
     operator_skill = (PLUGIN_ROOT / "skills" / "deepscientist-codex" / "SKILL.md").read_text(encoding="utf-8")
