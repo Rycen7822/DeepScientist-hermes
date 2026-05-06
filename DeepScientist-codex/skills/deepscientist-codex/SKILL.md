@@ -1,6 +1,6 @@
 ---
 name: deepscientist-codex
-description: Use DeepScientist from Codex CLI through the native dsctl adapter for research semantics/provenance: quests, memory, artifacts, experiments, strict literature workflow, paper/resource operations, and formal ds_bash_exec evidence. Routine file/search/edit, shell, Git, tests/builds, and process work remains Codex-native. This adapter is not MCP and does not call external ds.
+description: "Use DeepScientist from Codex CLI through the native dsctl adapter for research semantics/provenance: quests, memory, artifacts, experiments, strict literature workflow, paper/resource operations, and formal ds_bash_exec evidence. Routine file/search/edit, shell, Git, tests/builds, and process work remains Codex-native. This adapter is not MCP and does not call external ds."
 ---
 
 # DeepScientist Codex Native
